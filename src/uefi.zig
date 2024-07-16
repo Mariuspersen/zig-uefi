@@ -16,7 +16,7 @@ pub fn main() Status {
     var uefi_out = uefiWriter.init() catch return Status.Aborted;
     const stdout = uefi_out.writer();
     setup() catch |err| {
-        stdout.print("\r\nERROR: Unable to read because of: {any}\r\n", .{err}) catch {};
+        stdout.print("\r\nERROR: {any}\r\n", .{err}) catch {};
         return Status.Aborted;
     };
     return Status.Success;

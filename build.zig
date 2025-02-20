@@ -49,6 +49,8 @@ pub fn build(b: *std.Build) void {
         "qemu-system-x86_64",
         "-serial",
         "stdio",
+        "-vga",
+        "std",
         "-bios",
         "/usr/share/OVMF/x64/OVMF.4m.fd",
         "-drive",

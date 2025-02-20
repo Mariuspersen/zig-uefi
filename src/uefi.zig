@@ -120,7 +120,7 @@ fn setup() !void {
             if (.Success != reader.context.setPosition(Phdr.p_offset)) {
                 return error.UnableToSetImagePosition;
             }
-            try stdout.print("{X}\r\n", .{segBuf[0..Phdr.p_filesz]});
+            _ = try reader.readAtLeast(segBuf[0..Phdr.p_filesz], Phdr.p_filesz);
         }
     }
     _ = root.close();

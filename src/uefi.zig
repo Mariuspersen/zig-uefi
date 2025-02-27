@@ -49,6 +49,28 @@ fn setup() !void {
     var root: *const uefi.protocol.File = undefined;
     const path: [*:0]const u16 = std.unicode.utf8ToUtf16LeStringLiteral("\\EFI\\freestanding.elf");
 
+    var mmap: [*]uefi.tables.MemoryDescriptor = undefined;
+    var mmap_size: usize = 0;
+    var mmap_key: usize = 0;
+    var descriptor_size: usize = undefined;
+    var descriptor_version: u32 = undefined;
+
+    while (.BufferTooSmall == bs.getMemoryMap(
+        &mmap_size,
+        mmap,
+        &mmap_key,
+        &descriptor_size,
+        &descriptor_version,
+    )) {
+        if (.Success != bs.allocatePool(
+            .BootServicesData,
+            mmap_size,
+            @ptrCast(@alignCast(&mmap)),
+        )) {
+            return error.UnableToAllocatePool;
+        }
+    }
+
     try stdout.writeAll("Locating protocol for SimpleFileSystem\r\n");
     if (.Success != bs.locateProtocol(&uefi.protocol.SimpleFileSystem.guid, null, @ptrCast(&fs))) {
         return error.CouldNotLocateFileSystemProtocol;
@@ -99,7 +121,6 @@ fn setup() !void {
 
     try stdout.print("Reading Program Headers\r\n", .{});
     const programHeaders = try alloc.alloc(std.elf.Elf64_Phdr, header.e_phnum);
-    defer alloc.free(programHeaders);
 
     for (programHeaders) |*Phdr| {
         Phdr.* = try reader.readStruct(std.elf.Elf64_Phdr);
@@ -123,8 +144,22 @@ fn setup() !void {
             _ = try reader.readAtLeast(segBuf[0..Phdr.p_filesz], Phdr.p_filesz);
         }
     }
+
+    alloc.free(programHeaders);
+
+    try stdout.print("Disabling watchdog timer\r\n", .{});
+    if (.Success != bs.setWatchdogTimer(
+        0,
+        0,
+        0,
+        null,
+    )) {
+        return error.UnanleToSetWatchdogTimer;
+    }
+
     _ = root.close();
     _ = programFile.close();
-    const entry: *const fn() void = @ptrFromInt(header.e_entry);
+
+    const entry: *const fn () void = @ptrFromInt(header.e_entry);
     entry();
 }

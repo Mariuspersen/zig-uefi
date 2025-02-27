@@ -1,32 +1,5 @@
 const std = @import("std");
 
-fn outb(port: u16, val: u8) void {
-    asm volatile ("outb %[val], %[port]"
-        :
-        : [val] "{al}" (val),
-          [port] "{dx}" (port),
-        : "dx", "al"
-    );
-}
-
-fn outw(port: u16, val: u16) void {
-    asm volatile ("outb %[val], %[port]"
-        :
-        : [val] "{ax}" (val),
-          [port] "{dx}" (port),
-        : "dx", "ax"
-    );
-}
-
-fn outl(port: u16, val: u32) void {
-    asm volatile ("outb %[val], %[port]"
-        :
-        : [val] "{eax}" (val),
-          [port] "{dx}" (port),
-        : "dx", "eax"
-    );
-}
-
 fn inb(port: u16) u8 {
     return asm volatile ("inb %[port], %[byte]"
         : [byte] "={al}" (-> u8),
@@ -53,24 +26,6 @@ fn inl(port: u16) u32 {
 
 const PORT: u16 = 0x3f8;
 
-fn init() !void {
-    outb(PORT + 1, 0x00);
-    outb(PORT + 3, 0x80);
-    outb(PORT + 0, 0x03);
-    outb(PORT + 1, 0x00);
-    outb(PORT + 3, 0x03);
-    outb(PORT + 2, 0xC7);
-    outb(PORT + 4, 0x0B);
-    outb(PORT + 4, 0x1E);
-    outb(PORT + 0, 0xAE);
-
-    if (inb(PORT) != 0xAE) {
-        return error.FaultySerial;
-    }
-
-    outb(PORT + 4, 0x0F);
-}
-
 var incompleteInit = true;
 pub const UART_OUT = struct {
     const Self = @This();
@@ -95,5 +50,48 @@ pub const UART_OUT = struct {
             incompleteInit = !incompleteInit;
         }
         return .{ .context = undefined };
+    }
+    fn init() !void {
+        outb(PORT + 1, 0x00);
+        outb(PORT + 3, 0x80);
+        outb(PORT + 0, 0x03);
+        outb(PORT + 1, 0x00);
+        outb(PORT + 3, 0x03);
+        outb(PORT + 2, 0xC7);
+        outb(PORT + 4, 0x0B);
+        outb(PORT + 4, 0x1E);
+        outb(PORT + 0, 0xAE);
+
+        if (inb(PORT) != 0xAE) {
+            return error.FaultySerial;
+        }
+
+        outb(PORT + 4, 0x0F);
+    }
+    fn outb(port: u16, val: u8) void {
+        asm volatile ("outb %[val], %[port]"
+            :
+            : [val] "{al}" (val),
+              [port] "{dx}" (port),
+            : "dx", "al"
+        );
+    }
+
+    fn outw(port: u16, val: u16) void {
+        asm volatile ("outb %[val], %[port]"
+            :
+            : [val] "{ax}" (val),
+              [port] "{dx}" (port),
+            : "dx", "ax"
+        );
+    }
+
+    fn outl(port: u16, val: u32) void {
+        asm volatile ("outb %[val], %[port]"
+            :
+            : [val] "{eax}" (val),
+              [port] "{dx}" (port),
+            : "dx", "eax"
+        );
     }
 };

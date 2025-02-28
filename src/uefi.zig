@@ -42,9 +42,9 @@ pub fn main() Status {
 fn setup() !void {
     var uefi_out = try uefiWriter.init();
     const stdout = uefi_out.writer();
-    const alloc = uefi.raw_pool_allocator;
 
     const bs = uefi.system_table.boot_services orelse return error.NoBootService;
+    //const rs = uefi.system_table.runtime_services;
     var fs: *uefi.protocol.SimpleFileSystem = undefined;
     var root: *const uefi.protocol.File = undefined;
     const path: [*:0]const u16 = std.unicode.utf8ToUtf16LeStringLiteral("\\EFI\\freestanding.elf");
@@ -55,6 +55,7 @@ fn setup() !void {
     var descriptor_size: usize = undefined;
     var descriptor_version: u32 = undefined;
 
+    try stdout.writeAll("Finding Memory Map\r\n");
     while (.BufferTooSmall == bs.getMemoryMap(
         &mmap_size,
         mmap,
@@ -70,6 +71,15 @@ fn setup() !void {
             return error.UnableToAllocatePool;
         }
     }
+
+    var bestMem: uefi.tables.MemoryDescriptor = undefined;
+    for (mmap[0..mmap_size]) |memdesc| {
+        if (memdesc.type == .ConventionalMemory and memdesc.number_of_pages > bestMem.number_of_pages and !memdesc.attribute.ro) {
+            try stdout.print("Mem Info: {any}\r\n", .{memdesc});
+            bestMem = memdesc;
+        }
+    }
+    try stdout.print("Mem Info: {any}\r\n", .{bestMem});
 
     try stdout.writeAll("Locating protocol for SimpleFileSystem\r\n");
     if (.Success != bs.locateProtocol(&uefi.protocol.SimpleFileSystem.guid, null, @ptrCast(&fs))) {
@@ -119,14 +129,12 @@ fn setup() !void {
     try stdout.print("Reading ELF 64-Bit Header\r\n", .{});
     const header = try reader.readStruct(std.elf.Elf64_Ehdr);
 
+    try stdout.print("program entry at 0x{X}\r\n", .{header.e_entry});
+
     try stdout.print("Reading Program Headers\r\n", .{});
-    const programHeaders = try alloc.alloc(std.elf.Elf64_Phdr, header.e_phnum);
 
-    for (programHeaders) |*Phdr| {
-        Phdr.* = try reader.readStruct(std.elf.Elf64_Phdr);
-    }
-
-    for (programHeaders) |Phdr| {
+    for (0..header.e_phnum) |_| {
+        const Phdr = try reader.readStruct(std.elf.Elf64_Phdr);
         if (Phdr.p_type == std.elf.PT_LOAD) {
             var segBuf: [*]align(4096) u8 = @ptrFromInt(Phdr.p_paddr);
             const pageCount = efiSizeToPages(Phdr.p_memsz);
@@ -145,8 +153,6 @@ fn setup() !void {
         }
     }
 
-    alloc.free(programHeaders);
-
     try stdout.print("Disabling watchdog timer\r\n", .{});
     if (.Success != bs.setWatchdogTimer(
         0,
@@ -157,9 +163,45 @@ fn setup() !void {
         return error.UnanleToSetWatchdogTimer;
     }
 
+    //var status: uefi.Status = .NoResponse;
+    //while (status != .Success) {
+    //    _ = try stdout.write("Getting memory map and trying to exit boot services\r\n");
+    //    // Now, we will get the memory map as described above.
+    //    while (.BufferTooSmall == bs.getMemoryMap(
+    //        &mmap_size,
+    //        mmap,
+    //        &mmap_key,
+    //        &descriptor_size,
+    //        &descriptor_version,
+    //    )) {
+    //        if (.Success != bs.allocatePool(.BootServicesData, mmap_size, @ptrCast(@alignCast(&mmap)))) {
+    //            return error.GettingMemoryMapFailed;
+    //        }
+    //    }
+    //    // And now that we have the memory map key, we can try to exit the boot services.
+    //    status = bs.exitBootServices(uefi.handle, mmap_key);
+    //}
+//
+    //for (mmap[0..mmap_size]) |*memdesc| {
+    //    if (memdesc.type == .LoaderData) {
+    //        memdesc.virtual_start = header.e_entry;
+    //    } else {
+    //        memdesc.virtual_start = memdesc.physical_start;
+    //    }
+    //}
+//
+    //if (.Success != rs.setVirtualAddressMap(
+    //    mmap_size,
+    //    descriptor_size,
+    //    descriptor_version,
+    //    mmap,
+    //)) {
+    //    return error.UnableToSetVirtualAddressing;
+    //}
+
     _ = root.close();
     _ = programFile.close();
 
-    const entry: *const fn () void = @ptrFromInt(header.e_entry);
-    entry();
+    const entry: *const fn (*uefi.tables.MemoryDescriptor) noreturn = @ptrFromInt(header.e_entry);
+    entry(&bestMem);
 }

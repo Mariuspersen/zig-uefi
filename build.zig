@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
     const freestandingTarget = b.resolveTargetQuery(.{
         .os_tag = .freestanding,
         .cpu_arch = .x86_64,
-        .abi = .none,
+        .abi = .eabi,
         .ofmt = .elf,
     });
     const optimize = b.standardOptimizeOption(.{});
@@ -32,7 +32,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    freestanding.entry = .disabled;
+    //freestanding.entry = .disabled;
     freestanding.setLinkerScript(b.path("src/freestanding.ld"));
 
     const freestandingArtifact = b.addInstallArtifact(freestanding,.{
@@ -54,10 +54,13 @@ pub fn build(b: *std.Build) void {
         "-bios",
         switch (@import("builtin").os.tag) {
             .linux => "/usr/share/OVMF/x64/OVMF.4m.fd",
-            .windows => "OVMF.fd"
+            .windows => "OVMF.fd",
+            else => @panic("The kinda OS you running?")
         },
         "-drive",
         "format=raw,file=fat:rw:zig-out",
+        "-S",
+        "-s"
     });
 
     if (b.args) |args| {

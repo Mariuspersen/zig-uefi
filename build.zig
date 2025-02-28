@@ -52,7 +52,10 @@ pub fn build(b: *std.Build) void {
         "-vga",
         "std",
         "-bios",
-        "/usr/share/OVMF/x64/OVMF.4m.fd",
+        switch (@import("builtin").os.tag) {
+            .linux => "/usr/share/OVMF/x64/OVMF.4m.fd",
+            .windows => "OVMF.fd"
+        },
         "-drive",
         "format=raw,file=fat:rw:zig-out",
     });

@@ -3,9 +3,9 @@ const std = @import("std");
 const uefi = std.os.uefi;
 const SimpleTextOutput = uefi.protocol.SimpleTextOutput;
 const Status = uefi.Status;
-const allocator = uefi.pool_allocator;
 
 output: *SimpleTextOutput,
+buffer: [64:0]u16,
 
 const Writer = std.io.Writer(
     *Self,
@@ -14,12 +14,12 @@ const Writer = std.io.Writer(
 );
 
 pub fn init() !Self {
+    var temp: Self = undefined;
     if (uefi.system_table.con_out) |con| {
-        return .{
-            .output = con,
-        };
+        temp.output = con;
     }
     else return error.ConOutNotFound;
+    return temp;
 }
 
 pub fn reset(self: *Self) !void {
@@ -30,13 +30,12 @@ fn appendWrite(
     self: *Self,
     data: []const u8,
 ) error{ NotSuccess, InvalidUtf8, OutOfMemory }!usize {
-    const temp = try std.unicode.utf8ToUtf16LeAlloc(allocator, data);
-    defer allocator.free(temp);
-    const centinel = try allocator.dupeZ(u16, temp);
-    defer allocator.free(centinel);
-    const result = self.output.outputString(centinel.ptr);
-    if (result != .Success) return error.NotSuccess;
-    return centinel.len;
+    const written = try std.unicode.utf8ToUtf16Le(&self.buffer,data);
+    self.buffer[written] = 0;
+    if (.Success != self.output.outputString(&self.buffer)) {
+        return error.NotSuccess;
+    }
+    return written;
 }
 
 pub fn writer(self: *Self) Writer {

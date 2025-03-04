@@ -4,17 +4,14 @@ const builtin = std.builtin;
 const FBA = std.heap.FixedBufferAllocator;
 const io = @import("io.zig");
 
-var stackMem: [4096]u8 = undefined;
-
-export fn _start(ptr: *uefi.tables.MemoryDescriptor) callconv(.Win64) noreturn {
-    main(ptr) catch |err| @panic(@errorName(err));
+export fn _start() callconv(.Win64) noreturn {
+    main() catch |err| @panic(@errorName(err));
     while (true) {}
 }
 
-fn main(mem: *uefi.tables.MemoryDescriptor) !void {
-    const writer = io.UART_OUT.writer() catch while (true) {};
-    writer.print("Hello World!\n{any}", .{mem}) catch while (true) {};
-
+fn main() !void {
+    const writer = try io.UART_OUT.writer();
+    try writer.print("Hello World!\n", .{});
 }
 
 pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address: ?usize) noreturn {

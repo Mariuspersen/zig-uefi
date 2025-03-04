@@ -5,7 +5,7 @@ const SimpleTextOutput = uefi.protocol.SimpleTextOutput;
 const Status = uefi.Status;
 
 output: *SimpleTextOutput,
-buffer: [64:0]u16,
+buffer: [64:0]u16 = undefined,
 
 const Writer = std.io.Writer(
     *Self,
@@ -14,12 +14,12 @@ const Writer = std.io.Writer(
 );
 
 pub fn init() !Self {
-    var temp: Self = undefined;
     if (uefi.system_table.con_out) |con| {
-        temp.output = con;
+        return .{
+            .output = con,
+        };
     }
     else return error.ConOutNotFound;
-    return temp;
 }
 
 pub fn reset(self: *Self) !void {

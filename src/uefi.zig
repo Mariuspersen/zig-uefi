@@ -2,12 +2,14 @@ const std = @import("std");
 
 const uefiWriter = @import("writer.zig");
 const uefiReader = @import("reader.zig");
+const mmap = @import("mmap.zig");
 
 const uefi = std.os.uefi;
 
 const Status = uefi.Status;
 
 const SimpleTextInput = uefi.protocol.SimpleTextInput;
+const GraphicsOutput = uefi.protocol.GraphicsOutput;
 const Input = SimpleTextInput.Key.Input;
 const BootServices = uefi.tables.BootServices;
 const allocator = uefi.pool_allocator;
@@ -23,7 +25,6 @@ pub inline fn efiSizeToPages(value: anytype) @TypeOf(value) {
 
 pub fn main() Status {
     const bs = uefi.system_table.boot_services orelse return Status.Aborted;
-
     var uefi_out = uefiWriter.init() catch return Status.Aborted;
     var uefi_in = uefiReader.init() catch return Status.Aborted;
 
@@ -49,37 +50,13 @@ fn setup() !void {
     var root: *const uefi.protocol.File = undefined;
     const path: [*:0]const u16 = std.unicode.utf8ToUtf16LeStringLiteral("\\EFI\\freestanding.elf");
 
-    var mmap: [*]uefi.tables.MemoryDescriptor = undefined;
-    var mmap_size: usize = 0;
-    var mmap_key: usize = 0;
-    var descriptor_size: usize = undefined;
-    var descriptor_version: u32 = undefined;
-
     try stdout.writeAll("Finding Memory Map\r\n");
-    while (.BufferTooSmall == bs.getMemoryMap(
-        &mmap_size,
-        mmap,
-        &mmap_key,
-        &descriptor_size,
-        &descriptor_version,
-    )) {
-        if (.Success != bs.allocatePool(
-            .BootServicesData,
-            mmap_size,
-            @ptrCast(@alignCast(&mmap)),
-        )) {
-            return error.UnableToAllocatePool;
-        }
-    }
+    //var m = try mmap.init(bs);
 
-    var bestMem: uefi.tables.MemoryDescriptor = undefined;
-    for (mmap[0..mmap_size]) |memdesc| {
-        if (memdesc.type == .ConventionalMemory and memdesc.number_of_pages > bestMem.number_of_pages and !memdesc.attribute.ro) {
-            try stdout.print("Mem Info: {any}\r\n", .{memdesc});
-            bestMem = memdesc;
-        }
+    var grapics: *GraphicsOutput = undefined;
+    if (.Success != bs.locateProtocol(&GraphicsOutput.guid, null, @ptrCast(&grapics))) {
+        return error.UnableToLocateGraphicsProtocol;
     }
-    try stdout.print("Mem Info: {any}\r\n", .{bestMem});
 
     try stdout.writeAll("Locating protocol for SimpleFileSystem\r\n");
     if (.Success != bs.locateProtocol(&uefi.protocol.SimpleFileSystem.guid, null, @ptrCast(&fs))) {
@@ -92,9 +69,9 @@ fn setup() !void {
     }
 
     try stdout.print("Opening image\r\n", .{});
-    var programFile: *uefi.protocol.File = undefined;
+    var program: *uefi.protocol.File = undefined;
     if (.Success != root.open(
-        &programFile,
+        &program,
         path,
         uefi.protocol.File.efi_file_mode_read,
         uefi.protocol.File.efi_file_read_only,
@@ -103,7 +80,7 @@ fn setup() !void {
     }
 
     try stdout.print("Checking elf magic\r\n", .{});
-    const reader = programFile.reader();
+    const reader = program.reader();
     if ((try reader.readByte() != 0x7f) or
         (try reader.readByte() != 0x45) or
         (try reader.readByte() != 0x4c) or
@@ -153,6 +130,9 @@ fn setup() !void {
         }
     }
 
+    _ = root.close();
+    _ = program.close();
+
     try stdout.print("Disabling watchdog timer\r\n", .{});
     if (.Success != bs.setWatchdogTimer(
         0,
@@ -163,45 +143,6 @@ fn setup() !void {
         return error.UnanleToSetWatchdogTimer;
     }
 
-    //var status: uefi.Status = .NoResponse;
-    //while (status != .Success) {
-    //    _ = try stdout.write("Getting memory map and trying to exit boot services\r\n");
-    //    // Now, we will get the memory map as described above.
-    //    while (.BufferTooSmall == bs.getMemoryMap(
-    //        &mmap_size,
-    //        mmap,
-    //        &mmap_key,
-    //        &descriptor_size,
-    //        &descriptor_version,
-    //    )) {
-    //        if (.Success != bs.allocatePool(.BootServicesData, mmap_size, @ptrCast(@alignCast(&mmap)))) {
-    //            return error.GettingMemoryMapFailed;
-    //        }
-    //    }
-    //    // And now that we have the memory map key, we can try to exit the boot services.
-    //    status = bs.exitBootServices(uefi.handle, mmap_key);
-    //}
-//
-    //for (mmap[0..mmap_size]) |*memdesc| {
-    //    if (memdesc.type == .LoaderData) {
-    //        memdesc.virtual_start = header.e_entry;
-    //    } else {
-    //        memdesc.virtual_start = memdesc.physical_start;
-    //    }
-    //}
-//
-    //if (.Success != rs.setVirtualAddressMap(
-    //    mmap_size,
-    //    descriptor_size,
-    //    descriptor_version,
-    //    mmap,
-    //)) {
-    //    return error.UnableToSetVirtualAddressing;
-    //}
-
-    _ = root.close();
-    _ = programFile.close();
-
-    const entry: *const fn (*uefi.tables.MemoryDescriptor) noreturn = @ptrFromInt(header.e_entry);
-    entry(&bestMem);
+    const entry: *const fn () noreturn = @ptrFromInt(header.e_entry);
+    entry();
 }

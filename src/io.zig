@@ -46,7 +46,6 @@ pub const UART_OUT = struct {
     }
     pub fn writer() !Writer {
         try init();
-
         return .{ .context = undefined };
     }
     fn init() !void {

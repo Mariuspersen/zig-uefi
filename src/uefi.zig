@@ -12,7 +12,8 @@ const SimpleTextInput = uefi.protocol.SimpleTextInput;
 const GraphicsOutput = uefi.protocol.GraphicsOutput;
 const Input = SimpleTextInput.Key.Input;
 const BootServices = uefi.tables.BootServices;
-const allocator = uefi.pool_allocator;
+
+const PageAlignedPointer = [*]align(std.mem.page_size)u8;
 
 const efi_page_mask: usize = 0xfff;
 const efi_page_shift: usize = 12;
@@ -107,36 +108,35 @@ fn setup() !void {
     try stdout.print("Reading ELF 64-Bit Header\r\n", .{});
     const header = try reader.readStruct(std.elf.Elf64_Ehdr);
 
-    //uint64_t size = elf->page_size + (elf->image_end - elf->image_begin);
     try stdout.print("program entry at 0x{X}\r\n", .{header.e_entry});
-
     try stdout.print("Reading Program Headers\r\n", .{});
 
     for (0..header.e_phnum) |_| {
         const Phdr = try reader.readStruct(std.elf.Elf64_Phdr);
         var nextPos: u64 = undefined;
         if (.Success != reader.context.getPosition(&nextPos)) {
-                return error.UnableToSetImagePosition;
+            return error.UnableToSetImagePosition;
         }
-        if (Phdr.p_type == std.elf.PT_LOAD) {
-            var segBuf: [*]align(std.mem.page_size) u8 = @ptrFromInt(Phdr.p_paddr);
-            const pageCount = efiSizeToPages(Phdr.p_memsz);
-            if (.Success != bs.allocatePages(
-                .AllocateAddress,
-                .LoaderData,
-                pageCount,
-                &segBuf,
-            )) {
-                return error.UnableToAllocateProgramSegmentBuffer;
-            }
-            if (.Success != reader.context.setPosition(Phdr.p_offset)) {
-                return error.UnableToSetImagePosition;
-            }
-            _ = try reader.readAtLeast(segBuf[0..Phdr.p_filesz], Phdr.p_filesz);
-            
-            if (.Success != reader.context.setPosition(nextPos)) {
-                return error.UnableToSetImagePosition;
-            }
+        if (Phdr.p_type != std.elf.PT_LOAD) continue;
+        
+        var segBuf: PageAlignedPointer = @ptrFromInt(Phdr.p_paddr);
+
+        const pageCount = efiSizeToPages(Phdr.p_memsz);
+        if (.Success != bs.allocatePages(
+            .AllocateAddress,
+            .LoaderData,
+            pageCount,
+            &segBuf,
+        )) {
+            return error.UnableToAllocateProgramSegmentBuffer;
+        }
+        if (.Success != reader.context.setPosition(Phdr.p_offset)) {
+            return error.UnableToSetImagePosition;
+        }
+        _ = try reader.readAtLeast(segBuf[0..Phdr.p_filesz], Phdr.p_filesz);
+
+        if (.Success != reader.context.setPosition(nextPos)) {
+            return error.UnableToSetImagePosition;
         }
     }
 
@@ -153,6 +153,6 @@ fn setup() !void {
     _ = root.close();
     _ = program.close();
 
-    const entry: *const fn () noreturn = @ptrFromInt(header.e_entry);
-    entry();
+    const entry: *const fn (*GraphicsOutput) noreturn = @ptrFromInt(header.e_entry);
+    entry(grapics);
 }

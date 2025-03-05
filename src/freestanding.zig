@@ -3,6 +3,8 @@ const io = @import("io.zig");
 const uefi = std.os.uefi;
 const builtin = std.builtin;
 
+var stackMem: [4096]u8 = undefined;
+
 export fn _start() callconv(.Win64) noreturn {
     main() catch |err| @panic(@errorName(err));
     while (true) {}

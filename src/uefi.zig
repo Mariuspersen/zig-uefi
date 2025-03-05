@@ -51,7 +51,8 @@ fn setup() !void {
     const path: [*:0]const u16 = std.unicode.utf8ToUtf16LeStringLiteral("\\EFI\\freestanding.elf");
 
     try stdout.writeAll("Finding Memory Map\r\n");
-    //var m = try mmap.init(bs);
+    var m = try mmap.init(bs);
+    _ = &m;
 
     var grapics: *GraphicsOutput = undefined;
     if (.Success != bs.locateProtocol(&GraphicsOutput.guid, null, @ptrCast(&grapics))) {
@@ -113,6 +114,7 @@ fn setup() !void {
     for (0..header.e_phnum) |_| {
         const Phdr = try reader.readStruct(std.elf.Elf64_Phdr);
         if (Phdr.p_type == std.elf.PT_LOAD) {
+            try stdout.print("{any}\r\n", .{Phdr});
             var segBuf: [*]align(4096) u8 = @ptrFromInt(Phdr.p_paddr);
             const pageCount = efiSizeToPages(Phdr.p_memsz);
             if (.Success != bs.allocatePages(
@@ -130,9 +132,6 @@ fn setup() !void {
         }
     }
 
-    _ = root.close();
-    _ = program.close();
-
     try stdout.print("Disabling watchdog timer\r\n", .{});
     if (.Success != bs.setWatchdogTimer(
         0,
@@ -142,6 +141,9 @@ fn setup() !void {
     )) {
         return error.UnanleToSetWatchdogTimer;
     }
+
+    _ = root.close();
+    _ = program.close();
 
     const entry: *const fn () noreturn = @ptrFromInt(header.e_entry);
     entry();

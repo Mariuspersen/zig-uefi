@@ -36,6 +36,9 @@ pub fn updateMap(self: *Self, bs: *BootServices) !void {
         &self.descSize,
         &self.descVer,
     )) {
+        if (.Success != bs.freePool(@ptrCast(&self.size))) {
+            return error.UnableToFreePool;
+        }
         if (.Success != bs.allocatePool(
             .BootServicesData,
             self.size,

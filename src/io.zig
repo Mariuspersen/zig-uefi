@@ -45,10 +45,8 @@ pub const UART_OUT = struct {
         return data.len;
     }
     pub fn writer() !Writer {
-        if (incompleteInit) {
-            try init();
-            incompleteInit = !incompleteInit;
-        }
+        try init();
+
         return .{ .context = undefined };
     }
     fn init() !void {

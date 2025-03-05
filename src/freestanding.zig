@@ -1,8 +1,7 @@
 const std = @import("std");
+const io = @import("io.zig");
 const uefi = std.os.uefi;
 const builtin = std.builtin;
-const FBA = std.heap.FixedBufferAllocator;
-const io = @import("io.zig");
 
 export fn _start() callconv(.Win64) noreturn {
     main() catch |err| @panic(@errorName(err));
@@ -10,8 +9,9 @@ export fn _start() callconv(.Win64) noreturn {
 }
 
 fn main() !void {
+    const text = "Hello World!\n";
     const writer = try io.UART_OUT.writer();
-    try writer.print("Hello World!\n", .{});
+    try writer.writeAll(text);
 }
 
 pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address: ?usize) noreturn {

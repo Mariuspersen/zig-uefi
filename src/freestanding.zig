@@ -3,17 +3,14 @@ const io = @import("io.zig");
 const uefi = std.os.uefi;
 const builtin = std.builtin;
 
-var stackMem: [4096]u8 = undefined;
-
 export fn _start() callconv(.Win64) noreturn {
     main() catch |err| @panic(@errorName(err));
     while (true) {}
 }
 
 fn main() !void {
-    const text = "Hello World!\n";
     const writer = try io.UART_OUT.writer();
-    try writer.writeAll(text);
+    try writer.writeAll("Hello World!\n");
 }
 
 pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address: ?usize) noreturn {

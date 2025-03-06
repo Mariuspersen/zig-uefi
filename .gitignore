@@ -1,3 +1,4 @@
 /.zig-cache
 /zig-out
 OVMF.fd
+src/lat0-08.psf

@@ -59,10 +59,10 @@ pub fn build(b: *std.Build) void {
         },
         "-drive",
         "format=raw,file=fat:rw:zig-out",
-        "-S",
-        "-s"
+        //"-S",
+        //"-s"
     });
-
+    run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }

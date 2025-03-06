@@ -1,6 +1,6 @@
 const std = @import("std");
 
-fn inb(port: u16) u8 {
+pub fn inb(port: u16) u8 {
     return asm volatile ("inb %[port], %[byte]"
         : [byte] "={al}" (-> u8),
         : [port] "{dx}" (port),
@@ -24,7 +24,7 @@ fn inl(port: u16) u32 {
     );
 }
 
-const PORT: u16 = 0x3f8;
+pub const PORT: u16 = 0x3f8;
 
 var incompleteInit = true;
 pub const UART_OUT = struct {

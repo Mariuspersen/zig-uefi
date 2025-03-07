@@ -27,30 +27,50 @@ fn main() !void {
         else => |header| try writer.print("{any}\n", .{header}),
     }
 
-    var x: usize = 1;
-    var y: usize = 1;
+    var x: usize = 0;
+    var y: usize = 0;
     const bitField = packed struct {
-        b1: u1,
-        b2: u1,
-        b3: u1,
-        b4: u1,
-        b5: u1,
-        b6: u1,
-        b7: u1,
-        b8: u1,
+        b1: bool,
+        b2: bool,
+        b3: bool,
+        b4: bool,
+        b5: bool,
+        b6: bool,
+        b7: bool,
+        b8: bool,
     };
+    var count: usize = 0;
+    var ys: usize = 0;
     for (font.glyphs) |char| {
-        _ = &x;
-        _ = &y;
+        if (char == 0) {
+            y = 1;
+            x += switch (font.header) {
+                .psf1 => 8,
+                .psf2 => |h2| h2.width,
+            };
+            count += 1;
+            if (count > font.glyphCount) break;
+            try writer.print("------------------------------------\n", .{});
+            continue;
+        }
+        if (x + pcf.PSF1_Header.WIDTH > graphics.graphics.mode.info.pixels_per_scan_line) {
+            x = 1;
+            ys += switch (font.header) {
+                .psf1 => |h1| h1.height,
+                .psf2 => |h2| h2.height,
+            };
+        }
         const bits: bitField = @bitCast(char);
         const info = @typeInfo(@TypeOf(bits));
         inline for (info.Struct.fields,0..) |field,xs| {
             const value = @field(bits, field.name);
-            graphics.setPixel(xs + x, y, if (value == 1) 0x0000FF00 else 0x000000);
+            const len = info.Struct.fields.len;
+            graphics.setPixel(len - xs + x, y + ys, if (value) 0x0000FF00 else 0x00000000);
             //@compileLog(value);
         }
         y += 1;
         try writer.print("{b:0>8}\n", .{char});
+        //try writer.print("0x{X}\n", .{char});
     }
 
     

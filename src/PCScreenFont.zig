@@ -30,14 +30,10 @@ const Header = union(enum) {
 };
 
 const Mode = packed struct {
-    b1: bool,
-    b2: bool,
-    b3: bool,
-    b4: bool,
-    b5: bool,
-    MODESEQ: bool,
-    MODEHASTAB: bool,
     MODE512: bool,
+    MODEHASTAB: bool,
+    MODESEQ: bool,
+    unused: u5,
 };
 
 pub const PSF1_Header = packed struct {
@@ -79,4 +75,32 @@ pub fn init() !Self {
         .header = header,
         .glyphs = default8x16[fbs.pos..],
     };
+}
+
+pub fn getHeight(self: *const Self) @TypeOf(switch (self.header) {
+    .psf1 => |a| a.height,
+    .psf2 => |b| b.height,
+}) {
+    return switch (self.header) {
+        .psf1 => |a| a.height,
+        .psf2 => |b| b.height,
+    };
+}
+
+pub fn getWidth(self: *const Self) @TypeOf(switch (self.header) {
+        .psf1 => PSF1_Header.WIDTH,
+        .psf2 => |b| b.width,
+    }) {
+    return switch (self.header) {
+        .psf1 => PSF1_Header.WIDTH,
+        .psf2 => |b| b.width,
+    };
+}
+
+pub fn getChar(self: *const Self, index: usize) []const u8 {
+    const width = self.getWidth();
+    const height = self.getHeight();
+    const start = index * height * width / 8;
+    const end = start + height * width / 8;
+    return self.glyphs[start..end];
 }

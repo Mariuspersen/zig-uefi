@@ -10,10 +10,15 @@
         {
             "label": "QEMU",
             "type": "shell",
-            "command": "qemu-system-x86_64 -serial stdio -vga std -bios OVMF.fd -drive format=raw,file=fat:rw:zig-out -S -s",
+            "linux": {
+                "command": "qemu-system-x86_64 -serial stdio -vga std -bios /usr/share/OVMF/x64/OVMF.4m.fd -drive format=raw,file=fat:rw:zig-out -S -s &"
+            },
+            "windows": {
+                "command": "qemu-system-x86_64 -serial stdio -vga std -bios OVMF.fd -drive format=raw,file=fat:rw:zig-out -S -s"
+            },
         },
         {
-            "label": "build and launch",
+            "label": "bal",
             "dependsOrder": "sequence",
             "dependsOn":[
                 "build",

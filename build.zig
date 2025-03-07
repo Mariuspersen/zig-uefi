@@ -6,7 +6,6 @@ pub fn build(b: *std.Build) void {
             .os_tag = .uefi,
             .cpu_arch = .x86_64,
             .abi = .msvc,
-            .ofmt = .coff,
         },
     });
 
@@ -59,8 +58,8 @@ pub fn build(b: *std.Build) void {
         },
         "-drive",
         "format=raw,file=fat:rw:zig-out",
-        "-S",
-        "-s"
+        //"-S",
+        //"-s"
     });
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {

@@ -2,6 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
+            //"preLaunchTask": "bal",
             "name": "QEMU GDB Debug",
             "type": "cppdbg",
             "request": "launch",
@@ -17,7 +18,7 @@
                 {
                     "description": "Set OSABI to none",
                     "text": "set osabi none"
-                }
+                },
             ],
             "miDebuggerArgs": "",
             "logging": {

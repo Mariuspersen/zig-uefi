@@ -21,21 +21,39 @@ fn main() !void {
         const mode = graphics.getInfo(@intCast(i));
         try writer.print("{any}\n", .{mode});
     }
+    
+    const font = try pcf.init();
+    switch (font.header) {
+        else => |header| try writer.print("{any}\n", .{header}),
+    }
 
-    graphics.setPixel(1, 1, 0x0000FF00);
-    graphics.setPixel(1, 2, 0x0000FF00);
-    graphics.setPixel(1, 3, 0x0000FF00);
-    graphics.setPixel(3, 1, 0x0000FF00);
-    graphics.setPixel(3, 2, 0x0000FF00);
-    graphics.setPixel(3, 3, 0x0000FF00);
-    graphics.setPixel(2, 2, 0x0000FF00);
+    var x: usize = 1;
+    var y: usize = 1;
+    const bitField = packed struct {
+        b1: u1,
+        b2: u1,
+        b3: u1,
+        b4: u1,
+        b5: u1,
+        b6: u1,
+        b7: u1,
+        b8: u1,
+    };
+    for (font.glyphs) |char| {
+        _ = &x;
+        _ = &y;
+        const bits: bitField = @bitCast(char);
+        const info = @typeInfo(@TypeOf(bits));
+        inline for (info.Struct.fields,0..) |field,xs| {
+            const value = @field(bits, field.name);
+            graphics.setPixel(xs + x, y, if (value == 1) 0x0000FF00 else 0x000000);
+            //@compileLog(value);
+        }
+        y += 1;
+        try writer.print("{b:0>8}\n", .{char});
+    }
 
-    var fbs = std.io.fixedBufferStream(pcf.lat0);
-    const fontReader = fbs.reader();
-
-    const header = try fontReader.readStruct(pcf.PSF1_Header);
-    if (header.magic != pcf.PSF1_FONT_MAGIC) return error.InvalidPSF1FontMagic;
-    try writer.print("{any}\n", .{header});
+    
 
     var char: u8 = 0;
     while (char != 'P') : (char = io.inb(io.PORT)) {

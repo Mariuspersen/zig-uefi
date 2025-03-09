@@ -42,7 +42,7 @@ pub const PSF1_Header = packed struct {
     const MAGIC = 0x0436;
     pub const WIDTH = 8;
     magic: u16,
-    font: Mode,
+    mode: Mode,
     height: u8,
 };
 
@@ -64,7 +64,7 @@ const PSF2_Header = packed struct {
 
 header: Header,
 glyphs: []const u8,
-glyphCount: usize = 256,
+glyphCount: usize,
 
 pub fn init() !Self {
     var fbs = std.io.fixedBufferStream(default8x16);
@@ -74,6 +74,10 @@ pub fn init() !Self {
     return .{
         .header = header,
         .glyphs = default8x16[fbs.pos..],
+        .glyphCount = switch (header) {
+            .psf1 => |p1| if (p1.mode.MODE512) 512 else 256,
+            .psf2 => |p2| p2.length
+        }
     };
 }
 

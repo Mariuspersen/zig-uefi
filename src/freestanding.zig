@@ -20,11 +20,6 @@ fn main() !void {
     try screen.print("Stripped? {any}\n", .{@import("builtin").strip_debug_info});
     try writer.writeAll("Hello World!\n");
 
-    for (0..graphics.context.mode.max_mode) |i| {
-        const mode = graphics.getInfo(@intCast(i));
-        try writer.print("{any}\n", .{mode});
-    }
-
     var char: u8 = 0;
     while (char != 'P') : (char = io.inb(io.PORT)) {
         if (char == 0) continue;
@@ -39,7 +34,7 @@ fn main() !void {
 
 fn makeDwarfSection(start: *u8, end: *u8) std.dwarf.DwarfInfo.Section {
     const ptr = @intFromPtr(start);
-    const size = @intFromPtr(end)-@intFromPtr(start);
+    const size = @intFromPtr(end) - @intFromPtr(start);
     return .{
         .data = @as([*]u8, @ptrFromInt(ptr))[0..size],
         .owned = false,
@@ -78,9 +73,7 @@ pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address:
         screen.print("0x{X}\n", .{address}) catch loopForever();
     }
 
-    while (true) {
-        @breakpoint();
-    }
+    loopForever();
 }
 
 inline fn loopForever() noreturn {

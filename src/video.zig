@@ -62,25 +62,27 @@ const Writer = std.io.Writer(
 );
 
 fn write(self: *Self, data: []const u8) error{}!usize {
+    const width = self.font.getWidth();
+    const height = self.font.getHeight();
     for (data) |char| {
-        if (self.cursor.x + self.font.getWidth() > self.context.mode.info.pixels_per_scan_line) {
-            self.cursor.y += self.font.getHeight();
+        if (self.cursor.x + width > self.context.mode.info.pixels_per_scan_line) {
+            self.cursor.y += height;
             self.cursor.x = 0;
         }
         switch (char) {
             0x7F => {
                 // TODO: Fix wrapping
+                self.cursor.x -= width;
                 self.writeGlyph(0, self.cursor.x, self.cursor.y);
-                self.cursor.x -= self.font.getWidth();
             },
             '\n' => {
-                self.cursor.y += self.font.getHeight();
+                self.cursor.y += height;
                 self.cursor.x = 0;
             },
             '\r' => self.cursor.x = 0,
             else => {
                 self.writeGlyph(char,self.cursor.x,self.cursor.y);
-                self.cursor.x += self.font.getWidth();
+                self.cursor.x += width;
             }
         }
     }
@@ -91,6 +93,7 @@ pub fn writer(self: *Self) Writer {
     return Writer{ .context = self };
 }
 
+// TODO: This can't be used after exitBootServices, is there another way?
 pub fn getInfo(self: *Self, mode: u32) *GraphicsOutput.Mode.Info {
     var info: *GraphicsOutput.Mode.Info = undefined;
     var size: usize = @sizeOf(GraphicsOutput.Mode.Info);

@@ -20,7 +20,7 @@ cursor: Cursor = .{},
 pub fn init(ctx: *GraphicsOutput) Self {
     return .{
         .context = ctx,
-        .buffer = @as([*]u32, @ptrFromInt(ctx.mode.frame_buffer_base))[0..@divExact(ctx.mode.frame_buffer_size, 4)],
+        .buffer = @as([*]u32, @ptrFromInt(ctx.mode.frame_buffer_base))[0..@divExact(ctx.mode.frame_buffer_size, 4)+1],
         .font = psf.init() catch @panic("Could not init a font!"),
     };
 }
@@ -65,13 +65,25 @@ fn write(self: *Self, data: []const u8) error{}!usize {
     const width = self.font.getWidth();
     const height = self.font.getHeight();
     for (data) |char| {
-        if (self.cursor.x + width > self.context.mode.info.pixels_per_scan_line) {
+        if (self.cursor.x + width > self.context.mode.info.horizontal_resolution) {
             self.cursor.y += height;
+            self.cursor.x = 0;
+        }
+        if (self.cursor.y + width > self.context.mode.info.vertical_resolution) {
+            self.cursor.y = 0;
             self.cursor.x = 0;
         }
         switch (char) {
             0x7F => {
                 // TODO: Fix wrapping
+                if (self.cursor.x < width) {
+                    if (self.cursor.y < height) {
+                        continue;
+                    }
+                    self.cursor.y -= height;
+                    self.cursor.x = self.context.mode.info.horizontal_resolution;
+
+                }
                 self.cursor.x -= width;
                 self.writeGlyph(0, self.cursor.x, self.cursor.y);
             },

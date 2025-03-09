@@ -17,8 +17,8 @@ fn main() !void {
     const writer = try io.UART_OUT.writer();
     const screen = graphics.writer();
     try screen.print("Hello world from {any}!\n", .{@This()});
-    try screen.print("Stripped? {any}\n", .{@import("builtin").strip_debug_info});
     try writer.writeAll("Hello World!\n");
+    try builtinInfo(screen);
 
     var char: u8 = 0;
     while (char != 'P') : (char = io.inb(io.PORT)) {
@@ -30,6 +30,14 @@ fn main() !void {
         try writer.print("0x{X}\n", .{char});
     }
     @panic("Oopsies");
+}
+
+fn builtinInfo(writer: anytype) !void {
+    const bi = @import("builtin");
+    const info = @typeInfo(bi);
+    inline for (info.Struct.decls) |decl| {
+        try writer.print("{s} = {any}\n", .{decl.name, @field(bi, decl.name)});
+    }
 }
 
 fn makeDwarfSection(start: *u8, end: *u8) std.dwarf.DwarfInfo.Section {

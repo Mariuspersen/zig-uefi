@@ -1,9 +1,11 @@
 const std = @import("std");
-const io = @import("io.zig");
+const UART = @import("UART.zig");
 const uefi = std.os.uefi;
 const builtin = std.builtin;
 const video = @import("video.zig");
 const pcf = @import("PCScreenFont.zig");
+const a = @import("assembly.zig");
+
 
 var graphics: video = undefined;
 
@@ -14,14 +16,14 @@ export fn _start(g: *uefi.protocol.GraphicsOutput) callconv(.Win64) noreturn {
 }
 
 fn main() !void {
-    const writer = try io.UART_OUT.writer();
+    const writer = try UART.writer();
     const screen = graphics.writer();
     try screen.print("Hello world from {any}!\n", .{@This()});
     try writer.writeAll("Hello World!\n");
     try builtinInfo(screen);
 
     var char: u8 = 0;
-    while (char != 'P') : (char = io.inb(io.PORT)) {
+    while (char != 'P') : (char = a.inb(UART.PORT)) {
         if (char == 0) continue;
         switch (char) {
             '\r' => try screen.writeByte('\n'),
@@ -55,7 +57,7 @@ pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address:
         pixel.* = RED;
     }
 
-    const uart = io.UART_OUT.writer() catch loopForever();
+    const uart = UART.writer() catch loopForever();
     const screen = graphics.writer();
 
     graphics.cursor = .{ .x = 20, .y = 20 };

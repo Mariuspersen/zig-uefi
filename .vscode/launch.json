@@ -2,7 +2,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            //"preLaunchTask": "QEMU",
             "name": "QEMU GDB Debug",
             "type": "cppdbg",
             "request": "launch",

@@ -75,10 +75,10 @@ fn write(self: *Self, data: []const u8) error{}!usize {
         }
         switch (char) {
             0x7F => {
-                // TODO: Fix wrapping
                 if (self.cursor.x < width) {
                     if (self.cursor.y < height) {
-                        continue;
+                        self.cursor.x = self.context.mode.info.horizontal_resolution;
+                        self.cursor.y = self.context.mode.info.vertical_resolution;
                     }
                     self.cursor.y -= height;
                     self.cursor.x = self.context.mode.info.horizontal_resolution;

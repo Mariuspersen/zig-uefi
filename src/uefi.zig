@@ -51,10 +51,6 @@ fn setup() !void {
     var root: *const uefi.protocol.File = undefined;
     const path: [*:0]const u16 = std.unicode.utf8ToUtf16LeStringLiteral("\\EFI\\freestanding.elf");
 
-    try stdout.writeAll("Finding Memory Map\r\n");
-    var m = try mmap.init(bs);
-    _ = &m;
-
     var grapics: *GraphicsOutput = undefined;
     if (.Success != bs.locateProtocol(&GraphicsOutput.guid, null, @ptrCast(&grapics))) {
         return error.UnableToLocateGraphicsProtocol;
@@ -147,11 +143,19 @@ fn setup() !void {
         0,
         null,
     )) {
-        return error.UnanleToSetWatchdogTimer;
+        return error.UnableToSetWatchdogTimer;
     }
 
     _ = root.close();
     _ = program.close();
+
+    try stdout.writeAll("Finding Memory Map\r\n");
+    var m = try mmap.init(bs);
+    _ = &m;
+
+    if(.Success != bs.exitBootServices(uefi.handle, m.key)) {
+        while (true) {}
+    }
 
     const entry: *const fn (*GraphicsOutput) noreturn = @ptrFromInt(header.e_entry);
     entry(grapics);

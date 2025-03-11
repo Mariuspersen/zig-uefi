@@ -34,13 +34,13 @@ pub fn build(b: *std.Build) void {
     //freestanding.entry = .disabled;
     freestanding.setLinkerScript(b.path("src/freestanding.ld"));
 
-    const freestandingArtifact = b.addInstallArtifact(freestanding,.{
+    const freestandingArtifact = b.addInstallArtifact(freestanding, .{
         .dest_dir = .{ .override = .{ .custom = "/EFI" } },
     });
     b.default_step.dependOn(&freestandingArtifact.step);
 
     const uefiArtifact = b.addInstallArtifact(uefi_exe, .{
-        .dest_dir = .{ .override = .{ .custom =  "/EFI/BOOT"} },
+        .dest_dir = .{ .override = .{ .custom = "/EFI/BOOT" } },
     });
     b.default_step.dependOn(&uefiArtifact.step);
 
@@ -54,12 +54,19 @@ pub fn build(b: *std.Build) void {
         switch (@import("builtin").os.tag) {
             .linux => "/usr/share/OVMF/x64/OVMF.4m.fd",
             .windows => "OVMF.fd",
-            else => @panic("The kinda OS you running?")
+            else => @panic("The kinda OS you running?"),
         },
         "-drive",
         "format=raw,file=fat:rw:zig-out",
-        //"-S",
-        //"-s"
+        "-S",
+        "-s",
+        "-usb",
+        "-device",
+        "usb-mouse",
+        "-device",
+        "usb-kbd",
+        "-device",
+        "usb-tablet",
     });
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {

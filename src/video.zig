@@ -69,7 +69,7 @@ fn write(self: *Self, data: []const u8) error{}!usize {
             self.cursor.y += height;
             self.cursor.x = 0;
         }
-        if (self.cursor.y + width > self.context.mode.info.vertical_resolution) {
+        if (self.cursor.y + height > self.context.mode.info.vertical_resolution) {
             self.cursor.y = 0;
             self.cursor.x = 0;
         }

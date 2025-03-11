@@ -1,5 +1,7 @@
 const std = @import("std");
 const UART = @import("UART.zig");
+const PS2 = @import("PS2.zig");
+const PCI = @import("PCI.zig");
 const uefi = std.os.uefi;
 const builtin = std.builtin;
 const video = @import("video.zig");
@@ -20,18 +22,18 @@ fn main() !void {
     const screen = graphics.writer();
     try screen.print("Hello world from {any}!\n", .{@This()});
     try writer.writeAll("Hello World!\n");
-    try builtinInfo(screen);
 
     var char: u8 = 0;
-    while (char != 'P') : (char = a.inb(UART.PORT)) {
+    while (char != 'P') : (char = a.inb(PS2.PORT)) {
         if (char == 0) continue;
         switch (char) {
             '\r' => try screen.writeByte('\n'),
             else => try screen.writeByte(char),
         }
         try writer.print("0x{X}\n", .{char});
+        _ = a.inb(PS2.PORT);
     }
-    @panic("Oopsies");
+    @panic("End of main");
 }
 
 fn builtinInfo(writer: anytype) !void {

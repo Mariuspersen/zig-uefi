@@ -60,13 +60,6 @@ pub fn build(b: *std.Build) void {
         "format=raw,file=fat:rw:zig-out",
         "-S",
         "-s",
-        "-usb",
-        "-device",
-        "usb-mouse",
-        "-device",
-        "usb-kbd",
-        "-device",
-        "usb-tablet",
     });
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {

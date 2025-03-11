@@ -18,20 +18,18 @@ export fn _start(g: *uefi.protocol.GraphicsOutput) callconv(.Win64) noreturn {
 }
 
 fn main() !void {
-    const writer = try UART.writer();
+    const uart = try UART.writer();
     const screen = graphics.writer();
+    //const keyboard = PS2.reader();
     try screen.print("Hello world from {any}!\n", .{@This()});
-    try writer.writeAll("Hello World!\n");
+    try uart.writeAll("Hello UART!\n");
 
-    var char: u8 = 0;
-    while (char != 'P') : (char = a.inb(PS2.PORT)) {
-        if (char == 0) continue;
-        switch (char) {
-            '\r' => try screen.writeByte('\n'),
-            else => try screen.writeByte(char),
+    var scan = PS2.ScanCode.fetch();
+    while (scan.key != .P) : (scan = PS2.ScanCode.fetch()) {
+        if (scan.key == .ESC) {
+            graphics.clearScreen(0x18181818);
         }
-        try writer.print("0x{X}\n", .{char});
-        _ = a.inb(PS2.PORT);
+        try screen.print("{any} {X} {any}\n",.{scan.key,@intFromEnum(scan.key), scan.pressed});
     }
     @panic("End of main");
 }

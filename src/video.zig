@@ -12,21 +12,29 @@ const Cursor = struct {
 
 context: *GraphicsOutput,
 buffer: []u32,
-background: u32 = 0x00000000,
-foreground: u32 = 0x0000FF00,
+background: u32 = 0x18181818,
+foreground: u32 = 0xAAAAAAAA,
 font: psf,
 cursor: Cursor = .{},
 
 pub fn init(ctx: *GraphicsOutput) Self {
-    return .{
+    var temp = Self{
         .context = ctx,
         .buffer = @as([*]u32, @ptrFromInt(ctx.mode.frame_buffer_base))[0..@divExact(ctx.mode.frame_buffer_size, 4)+1],
         .font = psf.init() catch @panic("Could not init a font!"),
     };
+    temp.clearScreen(temp.background);
+    return temp;
 }
 
 pub inline fn setPixel(self: *Self, x: usize, y: usize, color: u32) void {
     self.buffer[x + (y * self.context.mode.info.pixels_per_scan_line)] = color;
+}
+
+pub fn clearScreen(self: *Self, color: u32) void {
+    for (self.buffer) |*pixel| {
+        pixel.* = color;
+    }
 }
 
 pub fn writeGlyph(self: *Self, index: usize, x: usize, y: usize) void {

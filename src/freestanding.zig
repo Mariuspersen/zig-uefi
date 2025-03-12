@@ -7,12 +7,15 @@ const builtin = std.builtin;
 const video = @import("video.zig");
 const pcf = @import("PCScreenFont.zig");
 const a = @import("assembly.zig");
+const mmap = @import("mmap.zig");
 
 
 var graphics: video = undefined;
+var memory: mmap = undefined;
 
-export fn _start(g: *uefi.protocol.GraphicsOutput) callconv(.Win64) noreturn {
+export fn _start(g: *uefi.protocol.GraphicsOutput, m: *mmap) callconv(.Win64) noreturn {
     graphics = video.init(g);
+    memory = m.*;
     main() catch |err| @panic(@errorName(err));
     while (true) {}
 }
@@ -20,11 +23,11 @@ export fn _start(g: *uefi.protocol.GraphicsOutput) callconv(.Win64) noreturn {
 fn main() !void {
     var ps2 = PS2.init();
     //const uart_r = UART.reader();
-    const uart_w = try UART.writer();
+    //const uart_w = try UART.writer();
     const screen = graphics.writer();
     const keyboard = ps2.reader();
     try screen.print("Hello world from {any}!\n", .{@This()});
-    try uart_w.writeAll("Hello UART!\n");
+    try screen.print("{any}!\n", .{memory});
 
     var char: u8 = try keyboard.readByte();
     while (char != 'P') : (char = try keyboard.readByte()) {

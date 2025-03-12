@@ -185,26 +185,40 @@ const Reader = std.io.Reader(
     read,
 );
 
+fn isPrintableCharacter(self: *Self, scan: ScanCode) bool {
+    switch (scan.key) {
+        .LEFT_SHIFT, .RIGHT_SHIFT => {
+            self.SHIFT_DOWN = !self.SHIFT_DOWN;
+            return false;
+        },
+        else => |key| {
+            if (key.getChar()) |_| {
+                if (!scan.pressed) return true;
+            } else return false;
+        },
+    }
+    return false;
+}
+
 fn read(
     self: *Self,
     dest: []u8,
 ) error{}!usize {
-    //const writer = @import("UART.zig").writer() catch return 0;
-
     for (dest) |*char| {
         var scan = ScanCode.fetch();
+        while (!self.isPrintableCharacter(scan)) scan = ScanCode.fetch();
 
-        switch (scan.key) {
-            .LEFT_SHIFT, .RIGHT_SHIFT => {
-                self.SHIFT_DOWN = !self.SHIFT_DOWN;
-                const size = self.read(dest) catch 0;
-                return size;
-            },
-            else => {},
-        }
         char.* = scan.key.getChar() orelse '?';
+        if (self.SHIFT_DOWN) switch (char.*) {
+            'a'...'z' => char.* -= 'a' - 'A',
+            '1'...'6', '8','9' => char.* -= '1' - '!',
+            '7' => char.* = '/',
+            '0' => char.* = '=',
+            '\\' => char.* = '`',
+            else => {}
+        };
         if (char.* >= 'a' and 'z' >= char.*) {
-            char.* -= if (self.SHIFT_DOWN) 'a'-'A' else 0;
+            
         }
     }
     return dest.len;

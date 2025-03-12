@@ -157,6 +157,6 @@ fn setup() !void {
         while (true) {}
     }
 
-    const entry: *const fn (*GraphicsOutput) noreturn = @ptrFromInt(header.e_entry);
-    entry(grapics);
+    const entry: *const fn (*GraphicsOutput,*mmap) noreturn = @ptrFromInt(header.e_entry);
+    entry(grapics,&m);
 }

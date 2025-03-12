@@ -189,20 +189,23 @@ fn read(
     self: *Self,
     dest: []u8,
 ) error{}!usize {
+    //const writer = @import("UART.zig").writer() catch return 0;
+
     for (dest) |*char| {
         var scan = ScanCode.fetch();
+
         switch (scan.key) {
-            .LEFT_SHIFT, .RIGHT_SHIFT, .MOD => {
-                if (scan.pressed) {
-                    self.SHIFT_DOWN = !self.SHIFT_DOWN;
-                }
+            .LEFT_SHIFT, .RIGHT_SHIFT => {
+                self.SHIFT_DOWN = !self.SHIFT_DOWN;
+                const size = self.read(dest) catch 0;
+                return size;
             },
-            else => {}
+            else => {},
         }
-        while (scan.pressed) : (scan = ScanCode.fetch()) {}
-        var converted = scan.key.getChar() orelse '?';
-        if (self.SHIFT_DOWN) converted += 'A';
-        char.* = converted ;
+        char.* = scan.key.getChar() orelse '?';
+        if (char.* >= 'a' and 'z' >= char.*) {
+            char.* -= if (self.SHIFT_DOWN) 'a'-'A' else 0;
+        }
     }
     return dest.len;
 }

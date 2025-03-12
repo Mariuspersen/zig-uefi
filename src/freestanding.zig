@@ -18,23 +18,23 @@ export fn _start(g: *uefi.protocol.GraphicsOutput) callconv(.Win64) noreturn {
 }
 
 fn main() !void {
-    const uart = try UART.writer();
+    var ps2 = PS2.init();
+    //const uart_r = UART.reader();
+    const uart_w = try UART.writer();
     const screen = graphics.writer();
-    //const keyboard = PS2.reader();
+    const keyboard = ps2.reader();
     try screen.print("Hello world from {any}!\n", .{@This()});
-    try uart.writeAll("Hello UART!\n");
+    try uart_w.writeAll("Hello UART!\n");
 
-    var scan = PS2.ScanCode.fetch();
-    while (scan.key != .P) : (scan = PS2.ScanCode.fetch()) {
-        if (scan.key == .ESC) {
-            graphics.clearScreen(0x18181818);
-        }
-        try screen.print("{any} {X} {any}\n",.{scan.key,@intFromEnum(scan.key), scan.pressed});
+    var char: u8 = try keyboard.readByte();
+    while (char != 'P') : (char = try keyboard.readByte()) {
+        try screen.writeByte(char);
     }
+
     @panic("End of main");
 }
 
-fn builtinInfo(writer: anytype) !void {
+fn structInfo(writer: anytype) !void {
     const bi = @import("builtin");
     const info = @typeInfo(bi);
     inline for (info.Struct.decls) |decl| {

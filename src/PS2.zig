@@ -54,9 +54,53 @@ const Key = enum(u7) {
     CTRL = 0x1D,
     SPACE = 0x39,
     MOD = 0x60,
+    CAPS = 0x3A,
+    TAB = 0x0F,
     META_LEFT = 0x5B,
     META_RIGHT = 0x5C,
+    PRINT = 0x37,
+    SCROLL = 0x46,
     ALT = 0x38,
+    LEFT = 0x4B,
+    RIGHT = 0x4D,
+    DOWN = 0x50,
+    INSERT = 0x52,
+    PAUSE = 0x45,
+    HOME = 0x47,
+    UP = 0x48,
+    PAGE_DOWN = 0x51,
+    PAGE_UP = 0x49,
+    DEL = 0x53,
+    F1 = 0x3B,
+    F2 = 0x3C,
+    F3 = 0x3D,
+    F4 = 0x3E,
+    F5 = 0x3F,
+    F6 = 0x40,
+    F7 = 0x41,
+    F8 = 0x42,
+    F9 = 0x43,
+    F10 = 0x44,
+    F11 = 0x57,
+    F12 = 0x58,
+    @"<" = 0x56,
+    @"'" = 0x2B,
+    @"¨" = 0x1B,
+    @"\\" = 0x0D,
+    @"+" = 0x0C,
+    @"-" = 0x35,
+    @"." = 0x34,
+    @"," = 0x33,
+    @"1" = 0x02,
+    @"2" = 0x03,
+    @"3" = 0x04,
+    @"4" = 0x05,
+    @"5" = 0x06,
+    @"6" = 0x07,
+    @"7" = 0x08,
+    @"8" = 0x09,
+    @"9" = 0x0A,
+    @"0" = 0x0B,
     _,
 
     pub fn getChar(self: Key) ?u8 {
@@ -87,9 +131,30 @@ const Key = enum(u7) {
             .X => 'x',
             .Y => 'y',
             .Z => 'z',
-            .AE => 'æ',
-            .OE => 'ø',
-            .AA => 'å',
+            .AE => 0x91,
+            .OE => 0xED,
+            .AA => 0x86,
+            .ENTER => '\n',
+            .@"1" => '1',
+            .@"2" => '2',
+            .@"3" => '3',
+            .@"4" => '4',
+            .@"5" => '5',
+            .@"6" => '6',
+            .@"7" => '7',
+            .@"8" => '8',
+            .@"9" => '9',
+            .@"0" => '0',
+            .@"<" => '<',
+            .@"'" => 0x27,
+            .@"¨" => 0x22,
+            .@"\\" => 0x5C,
+            .@"+" => '+',
+            .@"-" => '-',
+            .@"." => '.',
+            .@"," => ',',
+            .BACKSPACE => 0x7F,
+            .SPACE => ' ',
             else => null,
         };
     }
@@ -105,6 +170,15 @@ pub const ScanCode = packed struct {
     }
 };
 
+SHIFT_DOWN: bool = false,
+ALT_DOWN: bool = false,
+META_DOWN: bool = false,
+CTRL_DOWN: bool = false,
+
+pub fn init() Self {
+    return .{};
+}
+
 const Reader = std.io.Reader(
     *Self,
     error{},
@@ -112,17 +186,27 @@ const Reader = std.io.Reader(
 );
 
 fn read(
-    _: *Self,
+    self: *Self,
     dest: []u8,
 ) error{}!usize {
     for (dest) |*char| {
         var scan = ScanCode.fetch();
+        switch (scan.key) {
+            .LEFT_SHIFT, .RIGHT_SHIFT, .MOD => {
+                if (scan.pressed) {
+                    self.SHIFT_DOWN = !self.SHIFT_DOWN;
+                }
+            },
+            else => {}
+        }
         while (scan.pressed) : (scan = ScanCode.fetch()) {}
-        char.* = scan.key.getChar() orelse '?';
+        var converted = scan.key.getChar() orelse '?';
+        if (self.SHIFT_DOWN) converted += 'A';
+        char.* = converted ;
     }
     return dest.len;
 }
 
-pub fn reader() Reader {
-    return .{ .context = undefined };
+pub fn reader(self: *Self) Reader {
+    return .{ .context = self };
 }

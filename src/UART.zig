@@ -24,6 +24,7 @@ pub fn writer() !Writer {
     try init();
     return .{ .context = undefined };
 }
+
 fn init() !void {
     a.outb(PORT + 1, 0x00);
     a.outb(PORT + 3, 0x80);
@@ -40,4 +41,24 @@ fn init() !void {
     }
 
     a.outb(PORT + 4, 0x0F);
+}
+
+const Reader = std.io.Reader(
+    *Self,
+    error{},
+    read,
+);
+
+fn read(
+    _: *Self,
+    dest: []u8,
+) error{}!usize {
+    var char: u8 = a.inb(PORT);
+    while (char == 0) : (char = a.inb(PORT)) {}
+    for (dest) |*c| c.* = char;
+    return dest.len;
+}
+
+pub fn reader() Reader {
+    return .{ .context = undefined };
 }

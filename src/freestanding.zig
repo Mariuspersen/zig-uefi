@@ -9,11 +9,10 @@ const pcf = @import("PCScreenFont.zig");
 const a = @import("assembly.zig");
 const mmap = @import("mmap.zig");
 
-
 var graphics: video = undefined;
 var memory: mmap = undefined;
 
-export fn _start(g: *uefi.protocol.GraphicsOutput, m: *mmap) callconv(.Win64) noreturn {
+export fn _start(g: *uefi.protocol.GraphicsOutput, m: *const mmap) callconv(.Win64) noreturn {
     graphics = video.init(g);
     memory = m.*;
     main() catch |err| @panic(@errorName(err));
@@ -27,7 +26,21 @@ fn main() !void {
     const screen = graphics.writer();
     const keyboard = ps2.reader();
     try screen.print("Hello world from {any}!\n", .{@This()});
-    try screen.print("{any}!\n", .{memory});
+
+    for (memory.getSlice()) |mdesc| {
+        if (mdesc.type == .ConventionalMemory) {
+            const memory_space = @as([*]align(4096) u8, @ptrFromInt(mdesc.physical_start))[0 .. mdesc.number_of_pages * 4096];
+            var fba = std.heap.FixedBufferAllocator.init(memory_space);
+            const allocator = fba.allocator();
+
+            const fmt = try std.fmt.allocPrint(
+                allocator,
+                "Start Address: 0x{X} Number of Pages: {d}\n",
+                .{ mdesc.physical_start, mdesc.number_of_pages },
+            );
+            try screen.writeAll(fmt);
+        }
+    }
 
     var char: u8 = try keyboard.readByte();
     while (char != 'P') : (char = try keyboard.readByte()) {
@@ -41,7 +54,7 @@ fn structInfo(writer: anytype) !void {
     const bi = @import("builtin");
     const info = @typeInfo(bi);
     inline for (info.Struct.decls) |decl| {
-        try writer.print("{s} = {any}\n", .{decl.name, @field(bi, decl.name)});
+        try writer.print("{s} = {any}\n", .{ decl.name, @field(bi, decl.name) });
     }
 }
 

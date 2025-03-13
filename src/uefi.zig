@@ -150,13 +150,11 @@ fn setup() !void {
     _ = program.close();
 
     try stdout.writeAll("Finding Memory Map\r\n");
-    var m = try mmap.init(bs);
-    _ = &m;
-
+    const m = try mmap.init(bs);
     if(.Success != bs.exitBootServices(uefi.handle, m.key)) {
         while (true) {}
     }
 
-    const entry: *const fn (*GraphicsOutput,*mmap) noreturn = @ptrFromInt(header.e_entry);
-    entry(grapics,&m);
+    const entry: *const fn (*GraphicsOutput, *const mmap) noreturn = @ptrFromInt(header.e_entry);
+    entry(grapics, &m);
 }

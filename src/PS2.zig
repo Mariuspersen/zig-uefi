@@ -217,9 +217,6 @@ fn read(
             '\\' => char.* = '`',
             else => {}
         };
-        if (char.* >= 'a' and 'z' >= char.*) {
-            
-        }
     }
     return dest.len;
 }

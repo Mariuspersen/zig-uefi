@@ -1,12 +1,13 @@
 const Self = @This();
 const uefi = @import("std").os.uefi;
 const BootServices = uefi.tables.BootServices;
+const MemoryDescriptor = uefi.tables.MemoryDescriptor;
 
-map: [*]uefi.tables.MemoryDescriptor = undefined,
+map: [*]MemoryDescriptor = undefined,
 size: usize = 0,
-key: usize = undefined,
-descSize: usize = undefined,
-descVer: u32 = undefined,
+key: usize = 0,
+descSize: usize = 0,
+descVer: u32 = 0,
 
 pub fn init(bs: *BootServices) !Self {
     var self: Self = .{};
@@ -29,22 +30,23 @@ pub fn attemptToExitBootService(self: *Self, bs: *BootServices) !void {
 }
 
 pub fn updateMap(self: *Self, bs: *BootServices) !void {
-    while (.BufferTooSmall != bs.getMemoryMap(
+    while (.BufferTooSmall == bs.getMemoryMap(
         &self.size,
         self.map,
         &self.key,
         &self.descSize,
         &self.descVer,
     )) {
-        if (.Success != bs.freePool(@ptrCast(&self.size))) {
-            return error.UnableToFreePool;
-        }
         if (.Success != bs.allocatePool(
             .BootServicesData,
             self.size,
-            @ptrCast(&self.map),
+            @ptrCast(&self.*.map),
         )) {
             return error.UnableToAllocatePool;
-        }
+        }   
     }
+}
+
+pub fn getSlice(self: *Self) []MemoryDescriptor {
+    return self.map[0..self.size];
 }

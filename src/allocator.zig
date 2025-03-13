@@ -10,11 +10,13 @@ const MemoryDescriptor = std.os.uefi.tables.MemoryDescriptor;
 //"We already have a allocator"
 //The allocator at home:
 
+var GA: Self = undefined;
+
 buf: []u8 = undefined,
 index: usize = 0,
 last: ?[*]u8 = null,
 
-pub fn init(m: *const mmap) Self {
+pub fn init(m: *const mmap) void {
     var temp_mem: MemoryDescriptor = m.map[0];
 
     for (m.getSlice()) |mdesc| {
@@ -23,9 +25,13 @@ pub fn init(m: *const mmap) Self {
         }
     }
 
-    return .{
+    GA = Self{
         .buf = @as([*]align(4096) u8, @ptrFromInt(temp_mem.physical_start))[0 .. temp_mem.number_of_pages * 4096],
     };
+}
+
+pub fn get() *Self {
+    return &GA;
 }
 
 pub fn allocator(self: *Self) Allocator {

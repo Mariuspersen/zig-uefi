@@ -151,6 +151,7 @@ fn setup() !void {
 
     try stdout.writeAll("Finding Memory Map\r\n");
     const m = try mmap.init(bs);
+
     if(.Success != bs.exitBootServices(uefi.handle, m.key)) {
         while (true) {}
     }

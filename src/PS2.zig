@@ -5,6 +5,8 @@ const Self = @This();
 pub const PORT = 0x60;
 pub const STATUS = 0x64;
 
+pub var PS2: Self = undefined;
+
 const Config = packed struct {
     IQR_ENABLE_1: bool,
     IRQ_ENABLE_2: bool,
@@ -165,7 +167,7 @@ pub const ScanCode = packed struct {
     pressed: bool,
 
     pub fn fetch() ScanCode {
-        while (a.inb(STATUS) & 0x01 == 0) {}
+        while (a.inb(STATUS) & 0x01 == 0) a.io_wait();
         return @bitCast(a.inb(PORT));
     }
 };
@@ -175,8 +177,12 @@ ALT_DOWN: bool = false,
 META_DOWN: bool = false,
 CTRL_DOWN: bool = false,
 
-pub fn init() Self {
-    return .{};
+pub fn init() void {
+    PS2 = .{};
+}
+
+pub fn get() *Self {
+    return &PS2;
 }
 
 const Reader = std.io.Reader(

@@ -10,6 +10,8 @@ const Cursor = struct {
     y: usize = 0,
 };
 
+var graphics: Self = undefined;
+
 context: *GraphicsOutput,
 buffer: []u32,
 background: u32 = 0x18181818,
@@ -17,14 +19,18 @@ foreground: u32 = 0xAAAAAAAA,
 font: psf,
 cursor: Cursor = .{},
 
-pub fn init(ctx: *GraphicsOutput) Self {
+pub fn init(ctx: *GraphicsOutput) void {
     var temp = Self{
         .context = ctx,
         .buffer = @as([*]u32, @ptrFromInt(ctx.mode.frame_buffer_base))[0..@divExact(ctx.mode.frame_buffer_size, 4)+1],
         .font = psf.init() catch @panic("Could not init a font!"),
     };
     temp.clearScreen(temp.background);
-    return temp;
+    graphics = temp;
+}
+
+pub fn get() *Self {
+    return &graphics;
 }
 
 pub inline fn setPixel(self: *Self, x: usize, y: usize, color: u32) void {

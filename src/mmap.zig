@@ -48,5 +48,5 @@ pub fn updateMap(self: *Self, bs: *BootServices) !void {
 }
 
 pub fn getSlice(self: *const Self) []MemoryDescriptor {
-    return self.map[0..self.size];
+    return self.map[0..self.size / self.descSize];
 }

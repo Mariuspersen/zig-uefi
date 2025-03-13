@@ -51,11 +51,9 @@ pub fn build(b: *std.Build) void {
         "-vga",
         "std",
         "-bios",
-        switch (@import("builtin").os.tag) {
-            .linux => "/usr/share/OVMF/x64/OVMF.4m.fd",
-            .windows => "OVMF.fd",
-            else => @panic("The kinda OS you running?"),
-        },
+        // TODO: Figure out why OVMF.fd.4m on Arch Linux returns wrong 
+        // Memory description tables...
+        "OVMF.fd",
         "-drive",
         "format=raw,file=fat:rw:zig-out",
         "-S",

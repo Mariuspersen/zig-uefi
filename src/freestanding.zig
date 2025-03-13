@@ -8,32 +8,36 @@ const video = @import("video.zig");
 const pcf = @import("PCScreenFont.zig");
 const a = @import("assembly.zig");
 const mmap = @import("mmap.zig");
-const AllocatorAtHome = @import("allocator.zig");
+const alloc = @import("allocator.zig");
 
-
-var graphics: video = undefined;
-var ATH: AllocatorAtHome = undefined;
 
 export fn _start(g: *uefi.protocol.GraphicsOutput, m: *const mmap) callconv(.Win64) noreturn {
-    graphics = video.init(g);
-    ATH = AllocatorAtHome.init(m);
+    video.init(g);
+    alloc.init(m);
+    PS2.init();
     main() catch |err| @panic(@errorName(err));
     while (true) {}
 }
 
 fn main() !void {
-    var ps2 = PS2.init();
+    const GA = alloc.get();
+    const allocator = GA.allocator();
+
+    const graphics = video.get();
+    const screen = graphics.writer();
+    
+    var ps2 = PS2.get();
+    const keyboard = ps2.reader();
+
     //const uart_r = UART.reader();
     //const uart_w = try UART.writer();
-    const screen = graphics.writer();
-    const keyboard = ps2.reader();
     try screen.print("Hello world from {any}!\n", .{@This()});
-    const allocator = ATH.allocator();
+    try screen.print("Memory: {d}MB\n", .{GA.buf.len / (1028 * 1028)});
     const buf = try std.fmt.allocPrint(allocator, "{s}\n", .{"Hello :)"});
     try screen.writeAll(buf);
-    try screen.print("Allocator Index {}\n", .{ATH.index});
+    try screen.print("Allocator Index {}\n", .{GA.index});
     allocator.free(buf);
-    try screen.print("Allocator Index {}\n", .{ATH.index});
+    try screen.print("Allocator Index {}\n", .{GA.index});
     
 
     var char: u8 = try keyboard.readByte();
@@ -62,6 +66,7 @@ fn makeDwarfSection(start: *u8, end: *u8) std.dwarf.DwarfInfo.Section {
 }
 
 pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address: ?usize) noreturn {
+    const graphics = video.get();
     const RED = 0x00FF0000;
     for (graphics.buffer) |*pixel| {
         pixel.* = RED;

@@ -48,3 +48,7 @@ pub fn inl(port: u16) u32 {
         : "dx", "eax"
     );
 }
+
+pub fn io_wait() void {
+    outb(0x80, 0);
+}

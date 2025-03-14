@@ -5,11 +5,14 @@ const Self = @This();
 
 pub const PORT: u16 = 0x3f8;
 
+var UART: Self = undefined;
+
 const Writer = std.io.Writer(
     *Self,
     error{NotSuccess},
     write,
 );
+
 fn write(
     self: *Self,
     data: []const u8,
@@ -20,12 +23,11 @@ fn write(
     }
     return data.len;
 }
-pub fn writer() !Writer {
-    try init();
+pub fn writer(_: *Self) Writer {
     return .{ .context = undefined };
 }
 
-fn init() !void {
+pub fn init() !void {
     a.outb(PORT + 1, 0x00);
     a.outb(PORT + 3, 0x80);
     a.outb(PORT + 0, 0x03);
@@ -41,6 +43,12 @@ fn init() !void {
     }
 
     a.outb(PORT + 4, 0x0F);
+
+    UART = .{};
+}
+
+pub fn get() *Self {
+    return &UART;
 }
 
 const Reader = std.io.Reader(
@@ -59,6 +67,6 @@ fn read(
     return dest.len;
 }
 
-pub fn reader() Reader {
+fn reader(_: *Self) Reader {
     return .{ .context = undefined };
 }

@@ -10,12 +10,13 @@ const a = @import("assembly.zig");
 const mmap = @import("mmap.zig");
 const alloc = @import("allocator.zig");
 
-
 export fn _start(g: *uefi.protocol.GraphicsOutput, m: *const mmap) callconv(.Win64) noreturn {
     video.init(g);
     alloc.init(m);
     PS2.init();
-    main() catch |err| @panic(@errorName(err));
+    UART.init() catch |err| errorHandler(err);
+    PCI.init();
+    main() catch |err| errorHandler(err);
     while (true) {}
 }
 
@@ -29,8 +30,6 @@ fn main() !void {
     var ps2 = PS2.get();
     const keyboard = ps2.reader();
 
-    //const uart_r = UART.reader();
-    //const uart_w = try UART.writer();
     try screen.print("Hello world from {any}!\n", .{@This()});
     try screen.print("Memory: {d}MB\n", .{GA.buf.len / (1028 * 1028)});
     const buf = try std.fmt.allocPrint(allocator, "{s}\n", .{"Hello :)"});
@@ -65,6 +64,10 @@ fn makeDwarfSection(start: *u8, end: *u8) std.dwarf.DwarfInfo.Section {
     };
 }
 
+pub fn errorHandler(err: anyerror) noreturn {
+    @panic(@errorName(err));
+}
+
 pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address: ?usize) noreturn {
     const graphics = video.get();
     const RED = 0x00FF0000;
@@ -72,7 +75,8 @@ pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address:
         pixel.* = RED;
     }
 
-    const uart = UART.writer() catch loopForever();
+    const serial = UART.get();
+    const uart = serial.writer();
     const screen = graphics.writer();
 
     graphics.cursor = .{ .x = 20, .y = 20 };

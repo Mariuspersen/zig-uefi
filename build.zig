@@ -46,6 +46,8 @@ pub fn build(b: *std.Build) void {
 
     const run_cmd = b.addSystemCommand(&.{
         "qemu-system-x86_64",
+        "-device",
+        "pci-testdev",
         "-serial",
         "stdio",
         "-vga",

@@ -147,8 +147,8 @@ const Header = struct {
 const Self = @This();
 
 pub fn init() void {
-    const uart = @import("uart.zig").get();
-    const writer = uart.writer();
+    const video = @import("video.zig").get();
+    const writer = video.writer();
     const pci = Register0.get(0, 1);
     const status = Register1.get(0, 1);
     const command = Register2.get(0, 1);

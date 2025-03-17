@@ -52,3 +52,64 @@ pub fn inl(port: u16) u32 {
 pub fn io_wait() void {
     outb(0x80, 0);
 }
+
+const RFLAGS = packed struct {
+    CF: bool,
+    _1: bool,
+    PF: bool,
+    _2: bool,
+    AF: bool,
+    _3: bool,
+    ZF: bool,
+    SF: bool,
+    TF: bool,
+    IF: bool,
+    DF: bool,
+    OF: bool,
+    IOPL: u2,
+    NT: bool,
+    MD: bool,
+    RF: bool,
+    VM: bool,
+    AC: bool,
+    VIF: bool,
+    VIP: bool,
+    ID: bool,
+    _4: u8,
+    AES: bool,
+    AI: bool,
+    _5: u32,
+};
+
+pub fn cpuid() [12]u8 {
+    const part1: [4]u8 = @bitCast(asm volatile (
+        \\xor %eax,%eax
+        \\cpuid
+        : [_] "={ebx}" (-> u32),
+        :
+        : "eax", "ebx", "ecx", "edx"
+    ));
+    const part2: [4]u8 = @bitCast(asm volatile (
+        \\mov %[reg],%edx
+        : [reg] "={edx}" (-> u32),
+        :
+        : "edx"
+    ));
+    const part3: [4]u8 = @bitCast(asm volatile (
+        \\mov %[reg],%ecx
+        : [reg] "={ecx}" (-> u32),
+        :
+        : "ecx"
+    ));
+    return part1++part2++part3;
+}
+
+pub fn flags() RFLAGS {
+    return asm volatile (
+        \\pushfq
+        \\pop %[long]
+        : [long] "={rcx}" (-> RFLAGS),
+        :
+        : "rcx"
+    );
+}

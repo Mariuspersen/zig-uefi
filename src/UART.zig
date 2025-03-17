@@ -9,15 +9,14 @@ var UART: Self = undefined;
 
 const Writer = std.io.Writer(
     *Self,
-    error{NotSuccess},
+    error{},
     write,
 );
 
 fn write(
-    self: *Self,
+    _: *Self,
     data: []const u8,
-) error{NotSuccess}!usize {
-    _ = self;
+) error{}!usize {
     for (data) |value| {
         a.outb(PORT, value);
     }
@@ -27,7 +26,7 @@ pub fn writer(_: *Self) Writer {
     return .{ .context = undefined };
 }
 
-pub fn init() !void {
+pub fn init() void {
     a.outb(PORT + 1, 0x00);
     a.outb(PORT + 3, 0x80);
     a.outb(PORT + 0, 0x03);
@@ -39,7 +38,9 @@ pub fn init() !void {
     a.outb(PORT + 0, 0xAE);
 
     if (a.inb(PORT) != 0xAE) {
-        return error.FaultySerial;
+        const graphics = @import("video.zig").get();
+        const gwriter = graphics.writer();
+        gwriter.writeAll("UART Unavailable\n") catch {};
     }
 
     a.outb(PORT + 4, 0x0F);

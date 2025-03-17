@@ -14,7 +14,7 @@ export fn _start(g: *uefi.protocol.GraphicsOutput, m: *const mmap) callconv(.Win
     video.init(g);
     alloc.init(m);
     PS2.init();
-    UART.init() catch |err| errorHandler(err);
+    UART.init();
     PCI.init();
     main() catch |err| errorHandler(err);
     while (true) {}
@@ -30,7 +30,7 @@ fn main() !void {
     var ps2 = PS2.get();
     const keyboard = ps2.reader();
 
-    try screen.print("Hello world from {any}!\n", .{@This()});
+    try screen.print("{s}\n", .{a.cpuid()});
     try screen.print("Memory: {d}MB\n", .{GA.buf.len / (1028 * 1028)});
     const buf = try std.fmt.allocPrint(allocator, "{s}\n", .{"Hello :)"});
     try screen.writeAll(buf);

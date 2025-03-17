@@ -13,7 +13,7 @@ const GraphicsOutput = uefi.protocol.GraphicsOutput;
 const Input = SimpleTextInput.Key.Input;
 const BootServices = uefi.tables.BootServices;
 
-const PageAlignedPointer = [*]align(std.mem.page_size)u8;
+const PageAlignedPointer = [*]align(std.mem.page_size) u8;
 
 const efi_page_mask: usize = 0xfff;
 const efi_page_shift: usize = 12;
@@ -34,9 +34,8 @@ pub fn main() Status {
     const stdout = uefi_out.writer();
 
     setup() catch |err| {
-        stdout.print("\r\nERROR: {s}\r\nPress any key to return...\r\n", .{@errorName(err)}) catch {};
+        stdout.print("ERROR: {s}\r\nPress any key to return...\r\n", .{@errorName(err)}) catch {};
     };
-
     _ = uefi_in.WaitForKeyPress(bs);
     return Status.Success;
 }
@@ -52,30 +51,30 @@ fn setup() !void {
     const path: [*:0]const u16 = std.unicode.utf8ToUtf16LeStringLiteral("\\EFI\\freestanding.elf");
 
     var grapics: *GraphicsOutput = undefined;
-    if (.Success != bs.locateProtocol(&GraphicsOutput.guid, null, @ptrCast(&grapics))) {
-        return error.UnableToLocateGraphicsProtocol;
-    }
+    try bs.locateProtocol(
+        &GraphicsOutput.guid,
+        null,
+        @ptrCast(&grapics),
+    ).err();
 
     try stdout.writeAll("Locating protocol for SimpleFileSystem\r\n");
-    if (.Success != bs.locateProtocol(&uefi.protocol.SimpleFileSystem.guid, null, @ptrCast(&fs))) {
-        return error.CouldNotLocateFileSystemProtocol;
-    }
+    try bs.locateProtocol(
+        &uefi.protocol.SimpleFileSystem.guid,
+        null,
+        @ptrCast(&fs),
+    ).err();
 
     try stdout.writeAll("Opening root volume\r\n");
-    if (.Success != fs.openVolume(&root)) {
-        return error.CouldNotOpenRootVolume;
-    }
+    try fs.openVolume(&root).err();
 
     try stdout.print("Opening image\r\n", .{});
     var program: *uefi.protocol.File = undefined;
-    if (.Success != root.open(
+    try root.open(
         &program,
         path,
         uefi.protocol.File.efi_file_mode_read,
         uefi.protocol.File.efi_file_read_only,
-    )) {
-        return error.CouldNotOpenProgram;
-    }
+    ).err();
 
     try stdout.print("Checking elf magic\r\n", .{});
     const reader = program.reader();
@@ -110,41 +109,31 @@ fn setup() !void {
     for (0..header.e_phnum) |_| {
         const Phdr = try reader.readStruct(std.elf.Elf64_Phdr);
         var nextPos: u64 = undefined;
-        if (.Success != reader.context.getPosition(&nextPos)) {
-            return error.UnableToSetImagePosition;
-        }
+        try reader.context.getPosition(&nextPos).err();
         if (Phdr.p_type != std.elf.PT_LOAD) continue;
-        
+
         var segBuf: PageAlignedPointer = @ptrFromInt(Phdr.p_paddr);
 
         const pageCount = efiSizeToPages(Phdr.p_memsz);
-        if (.Success != bs.allocatePages(
+        try bs.allocatePages(
             .AllocateAddress,
             .LoaderData,
             pageCount,
             &segBuf,
-        )) {
-            return error.UnableToAllocateProgramSegmentBuffer;
-        }
-        if (.Success != reader.context.setPosition(Phdr.p_offset)) {
-            return error.UnableToSetImagePosition;
-        }
+        ).err();
+        try reader.context.setPosition(Phdr.p_offset).err();
         _ = try reader.readAtLeast(segBuf[0..Phdr.p_filesz], Phdr.p_filesz);
 
-        if (.Success != reader.context.setPosition(nextPos)) {
-            return error.UnableToSetImagePosition;
-        }
+        try reader.context.setPosition(nextPos).err();
     }
 
     try stdout.print("Disabling watchdog timer\r\n", .{});
-    if (.Success != bs.setWatchdogTimer(
+    try bs.setWatchdogTimer(
         0,
         0,
         0,
         null,
-    )) {
-        return error.UnableToSetWatchdogTimer;
-    }
+    ).err();
 
     _ = root.close();
     _ = program.close();
@@ -152,7 +141,7 @@ fn setup() !void {
     try stdout.writeAll("Finding Memory Map\r\n");
     const m = try mmap.init(bs);
 
-    if(.Success != bs.exitBootServices(uefi.handle, m.key)) {
+    if (.Success != bs.exitBootServices(uefi.handle, m.key)) {
         while (true) {}
     }
 

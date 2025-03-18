@@ -10,7 +10,12 @@ const a = @import("assembly.zig");
 const mmap = @import("mmap.zig");
 const alloc = @import("allocator.zig");
 
-export fn _start(g: *uefi.protocol.GraphicsOutput, m: *const mmap) callconv(.Win64) noreturn {
+const RuntimeServices = uefi.tables.RuntimeServices;
+
+var rs: *RuntimeServices = undefined;
+
+export fn _start(g: *uefi.protocol.GraphicsOutput, m: *const mmap, r: *RuntimeServices) callconv(.Win64) noreturn {
+    rs = r;
     video.init(g);
     alloc.init(m);
     PS2.init();
@@ -23,28 +28,46 @@ export fn _start(g: *uefi.protocol.GraphicsOutput, m: *const mmap) callconv(.Win
 fn main() !void {
     const GA = alloc.get();
     const allocator = GA.allocator();
+    
+    var buffer = std.ArrayList(u8).init(allocator);
+    const writer = buffer.writer();
 
     const graphics = video.get();
     const screen = graphics.writer();
-    
+
     var ps2 = PS2.get();
-    const keyboard = ps2.reader();
+    //const keyboard = ps2.reader();
 
     try screen.print("{s}\n", .{a.cpuid()});
     try screen.print("Memory: {d}MB\n", .{GA.buf.len / (1028 * 1028)});
-    const buf = try std.fmt.allocPrint(allocator, "{s}\n", .{"Hello :)"});
-    try screen.writeAll(buf);
-    try screen.print("Allocator Index {}\n", .{GA.index});
-    allocator.free(buf);
-    try screen.print("Allocator Index {}\n", .{GA.index});
-    
 
-    var char: u8 = try keyboard.readByte();
-    while (char != 'P') : (char = try keyboard.readByte()) {
-        try screen.writeByte(char);
+
+    try screen.print("{any}", .{rs.resetSystem});
+
+    var scan = PS2.ScanCode.fetch();
+    while (true) : (scan = PS2.ScanCode.fetch()) {
+        switch (scan.key) {
+            .ESC => ps2.reboot(),
+            .F1 => shutdown(),
+            else => {
+                if (scan.key.getChar()) |char| {
+                    try screen.writeByte(char);
+                    try writer.writeByte(char);
+                }
+            },
+        }
     }
 
     @panic("End of main");
+}
+
+fn shutdown() noreturn {
+    rs.resetSystem(
+        .ResetCold,
+        .Success,
+        0,
+        null,
+    );
 }
 
 fn structInfo(writer: anytype) !void {

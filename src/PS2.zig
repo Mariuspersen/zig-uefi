@@ -230,3 +230,9 @@ fn read(
 pub fn reader(self: *Self) Reader {
     return .{ .context = self };
 }
+
+pub fn reboot(_: *Self) noreturn {
+    while (a.inb(STATUS) & 0x01 == 0) a.io_wait();
+    a.outb(STATUS, 0xFE);
+    while (true) asm volatile("HLT");
+}

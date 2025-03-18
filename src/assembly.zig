@@ -8,7 +8,7 @@ pub fn outb(port: u16, val: u8) void {
 }
 
 pub fn outw(port: u16, val: u16) void {
-    asm volatile ("outb %[val], %[port]"
+    asm volatile ("outw %[val], %[port]"
         :
         : [val] "{ax}" (val),
           [port] "{dx}" (port),

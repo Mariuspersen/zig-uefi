@@ -1,5 +1,7 @@
 const std = @import("std");
 const a = @import("assembly.zig");
+const interrupts = @import("interrupts.zig");
+
 const Self = @This();
 
 pub const PORT = 0x60;
@@ -8,7 +10,7 @@ pub const STATUS = 0x64;
 pub var PS2: Self = undefined;
 
 const Config = packed struct {
-    IQR_ENABLE_1: bool,
+    IRQ_ENABLE_1: bool,
     IRQ_ENABLE_2: bool,
     POWERED_STATE: bool,
     RESERVED_ZERO_1: bool,
@@ -179,6 +181,20 @@ CTRL_DOWN: bool = false,
 
 pub fn init() void {
     PS2 = .{};
+    a.outb(STATUS, 0x20);
+    var config: Config = @bitCast(a.inb(PORT));
+    config.IRQ_ENABLE_1 = true;
+    a.outb(PORT, @bitCast(config));
+    a.outb(STATUS, 0x60);
+    interrupts.setupHandler(33, .kernel, interrupt);
+}
+
+pub fn interrupt() void {
+    const video = @import("video.zig");
+    const v = video.get();
+    const writer = v.writer();
+    const keyCode: ScanCode = @bitCast(a.inb(PORT));
+    writer.print("Keyboard! {any}\n", .{keyCode}) catch {};
 }
 
 pub fn get() *Self {

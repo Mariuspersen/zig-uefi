@@ -15,7 +15,7 @@ const Input = SimpleTextInput.Key.Input;
 const BootServices = uefi.tables.BootServices;
 const RuntimeServices = uefi.tables.RuntimeServices;
 
-const PageAlignedPointer = [*]align(std.mem.page_size) u8;
+const PageAlignedPointer = [*]align(std.heap.pageSize()) u8;
 
 const efi_page_mask: usize = 0xfff;
 const efi_page_shift: usize = 12;
@@ -40,7 +40,7 @@ pub fn main() Status {
         try screen.writeAll("Press the power button to restart...\n");
         asm volatile ("HLT");
     }
-    return Status.Success;
+    return Status.success;
 }
 
 fn setup() !void {
@@ -60,6 +60,8 @@ fn setup() !void {
     video.init(grapics);
     const screen = video.get().writer();
 
+    try screen.print("{any}", .{grapics.*});
+
     try screen.writeAll("Locating protocol for SimpleFileSystem\n");
     try bs.locateProtocol(
         &uefi.protocol.SimpleFileSystem.guid,
@@ -71,7 +73,7 @@ fn setup() !void {
     try fs.openVolume(&root).err();
 
     try screen.print("Opening image\n", .{});
-    var program: *uefi.protocol.File = undefined;
+    var program: *const uefi.protocol.File = undefined;
     try root.open(
         &program,
         path,
@@ -117,8 +119,8 @@ fn setup() !void {
 
         const pageCount = efiSizeToPages(Phdr.p_memsz);
         try bs.allocatePages(
-            .AllocateAddress,
-            .LoaderData,
+            .allocate_address,
+            .loader_data,
             pageCount,
             &segBuf,
         ).err();
@@ -142,6 +144,7 @@ fn setup() !void {
     try screen.writeAll("Setting Virtual Address Map\n");
     try rs.setVirtualAddressMap(m.size, m.descSize, m.descVer, m.map).err();
 
-    const entry: *const fn (*GraphicsOutput, *const mmap, *RuntimeServices) noreturn = @ptrFromInt(header.e_entry);
+    const entry: *const fn (*GraphicsOutput, *const mmap, *RuntimeServices) callconv(.Win64) noreturn = @ptrFromInt(header.e_entry);
+    try screen.print("{any}", .{grapics.*});
     entry(grapics, &m, rs);
 }

@@ -104,6 +104,8 @@ pub fn cpuid() [12]u8 {
     return part1++part2++part3;
 }
 
+
+
 pub fn flags() RFLAGS {
     return asm volatile (
         \\pushfq

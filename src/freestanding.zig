@@ -9,6 +9,7 @@ const pcf = @import("PCScreenFont.zig");
 const a = @import("assembly.zig");
 const mmap = @import("mmap.zig");
 const alloc = @import("allocator.zig");
+const interrupts = @import("interrupts.zig");
 
 const RuntimeServices = uefi.tables.RuntimeServices;
 
@@ -18,6 +19,7 @@ export fn _start(g: *uefi.protocol.GraphicsOutput, m: *const mmap, r: *RuntimeSe
     rs = r;
     video.init(g);
     alloc.init(m);
+    interrupts.init();
     PS2.init();
     UART.init();
     PCI.init();
@@ -63,8 +65,8 @@ fn main() !void {
 
 fn shutdown() noreturn {
     rs.resetSystem(
-        .ResetCold,
-        .Success,
+        .reset_cold,
+        .success,
         0,
         null,
     );

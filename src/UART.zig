@@ -1,29 +1,46 @@
 const std = @import("std");
 const a = @import("assembly.zig");
-
-const Self = @This();
+const Writer = std.io.Writer;
+const Error = Writer.Error;
+const Reader = std.io.Reader;
 
 pub const PORT: u16 = 0x3f8;
 
+const Self = @This();
+
+interface_write: Writer,
+
 var UART: Self = undefined;
+var buf: [1024]u8 = undefined;
 
-const Writer = std.io.Writer(
-    *Self,
-    error{},
-    write,
-);
-
-fn write(
-    _: *Self,
-    data: []const u8,
-) error{}!usize {
-    for (data) |value| {
-        a.outb(PORT, value);
+fn drain(w: *Writer, data: []const []const u8, splat: usize) Error!usize {
+    if (data.len == 0) return 0;
+    var count: usize = 0;
+    for (w.buffer[0..w.end]) |char| {
+        a.outb(PORT, char);
+        count += 1;
     }
-    return data.len;
+    for (data) |string| for (string) |char| {
+        a.outb(PORT, char);
+        count += 1;
+    };
+    for (0..splat) |_| {
+        for (data[data.len - 1]) |value| {
+            a.outb(PORT, value);
+            count += 1;
+        }
+    }
+    w.end += count;
+    return count;
 }
-pub fn writer(_: *Self) Writer {
-    return .{ .context = undefined };
+
+fn writer(buffer: []u8) Writer {
+    return .{
+        .buffer = buffer,
+        .vtable = .{
+            .drain = drain,
+        },
+    };
 }
 
 pub fn init() void {
@@ -45,18 +62,11 @@ pub fn init() void {
 
     a.outb(PORT + 4, 0x0F);
 
-    UART = .{};
+    UART = .{
+        .interface_write = writer(&buf)
+    };
 }
 
-pub fn get() *Self {
-    return &UART;
-}
-
-const Reader = std.io.Reader(
-    *Self,
-    error{},
-    read,
-);
 
 fn read(
     _: *Self,
@@ -68,6 +78,11 @@ fn read(
     return dest.len;
 }
 
-fn reader(_: *Self) Reader {
-    return .{ .context = undefined };
+fn reader(buffer: []u8) Reader {
+    return .{
+        .buffer = buffer,
+        .vtable = .{
+            
+        }
+    };
 }

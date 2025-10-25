@@ -19,13 +19,16 @@ foreground: u32 = 0xAAAAAAAA,
 font: psf,
 cursor: Cursor = .{},
 
-pub fn init(ctx: *GraphicsOutput) void {
+pub fn init(ctx: *GraphicsOutput, x: usize, y: usize) void {
     var temp = Self{
         .context = ctx,
         .buffer = @as([*]u32, @ptrFromInt(ctx.mode.frame_buffer_base))[0..@divExact(ctx.mode.frame_buffer_size, 4)+1],
         .font = psf.init() catch @panic("Could not init a font!"),
+        .cursor = .{ .x = x, .y = y},
     };
-    temp.clearScreen(temp.background);
+    if (x == 0 and y == 0) {
+        temp.clearScreen(temp.background);
+    }
     graphics = temp;
 }
 

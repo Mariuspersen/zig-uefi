@@ -20,7 +20,7 @@ pub fn init(m: *const mmap) void {
     var temp_mem: MemoryDescriptor = m.map[0];
 
     for (m.getSlice()) |mdesc| {
-        if (mdesc.type == .ConventionalMemory and mdesc.number_of_pages > temp_mem.number_of_pages) {
+        if (mdesc.type == .conventional_memory and mdesc.number_of_pages > temp_mem.number_of_pages) {
             temp_mem = mdesc;
         }
     }

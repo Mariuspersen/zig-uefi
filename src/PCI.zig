@@ -147,16 +147,7 @@ const Header = struct {
 const Self = @This();
 
 pub fn init() void {
-    const video = @import("video.zig").get();
-    const writer = video.writer();
-    const pci = Register0.get(0, 1);
-    const status = Register1.get(0, 1);
-    const command = Register2.get(0, 1);
-    const reg3 = Register3.get(0, 1);
-    writer.print("{any}\n", .{pci}) catch @panic("Eh");
-    writer.print("{any}\n", .{status}) catch @panic("Eh");
-    writer.print("{any}\n", .{command}) catch @panic("Eh");
-    writer.print("{any}\n", .{reg3}) catch @panic("Eh");
+
 }
 
 fn pciConfigReadWord(bus: u8, slot: u5, func: u3, offset: u8) u16 {

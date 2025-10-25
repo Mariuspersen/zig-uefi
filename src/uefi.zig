@@ -57,8 +57,9 @@ fn setup() !void {
         @ptrCast(&grapics),
     ).err();
 
-    video.init(grapics);
-    const screen = video.get().writer();
+    video.init(grapics,0,0);
+    const v = video.get();
+    const screen = v.writer();
 
     try screen.writeAll("Locating protocol for SimpleFileSystem\n");
     try bs.locateProtocol(
@@ -142,6 +143,7 @@ fn setup() !void {
     try screen.writeAll("Setting Virtual Address Map\n");
     try rs.setVirtualAddressMap(m.size, m.descSize, m.descVer, m.map).err();
 
-    const entry: *const fn (*GraphicsOutput, *const mmap, *RuntimeServices) noreturn = @ptrFromInt(header.e_entry);
-    entry(grapics, &m, rs);
+    try screen.writeAll("Exiting UEFI Bootloader\n");
+    const entry: *const fn (*GraphicsOutput, *const mmap, *RuntimeServices, x: usize, y: usize) noreturn = @ptrFromInt(header.e_entry);
+    entry(grapics, &m, rs, v.cursor.x,v.cursor.y);
 }

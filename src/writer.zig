@@ -20,6 +20,7 @@ pub fn init() !Self {
         };
     }
     else return error.ConOutNotFound;
+
 }
 
 pub fn reset(self: *Self) !void {

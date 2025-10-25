@@ -19,16 +19,20 @@ pub fn build(b: *std.Build) void {
 
     const uefi_exe = b.addExecutable(.{
         .name = "bootx64",
-        .root_source_file = b.path("src/uefi.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/uefi.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     const freestanding = b.addExecutable(.{
         .name = "freestanding.elf",
-        .root_source_file = b.path("src/freestanding.zig"),
-        .target = freestandingTarget,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/freestanding.zig"),
+            .target = freestandingTarget,
+            .optimize = optimize,
+        }),
     });
 
     //freestanding.entry = .disabled;
@@ -53,7 +57,7 @@ pub fn build(b: *std.Build) void {
         "-vga",
         "std",
         "-bios",
-        // TODO: Figure out why OVMF.fd.4m on Arch Linux returns wrong 
+        // TODO: Figure out why OVMF.fd.4m on Arch Linux returns wrong
         // Memory description tables...
         "OVMF.fd",
         "-drive",

@@ -3,7 +3,7 @@ pub fn outb(port: u16, val: u8) void {
         :
         : [val] "{al}" (val),
           [port] "{dx}" (port),
-        : "dx", "al"
+        : .{ .dx = true, .al = true }
     );
 }
 
@@ -12,7 +12,7 @@ pub fn outw(port: u16, val: u16) void {
         :
         : [val] "{ax}" (val),
           [port] "{dx}" (port),
-        : "dx", "ax"
+        : .{ .dx = true, .ax = true }
     );
 }
 
@@ -21,7 +21,7 @@ pub fn outl(port: u16, val: u32) void {
         :
         : [val] "{eax}" (val),
           [port] "{dx}" (port),
-        : "dx", "eax"
+        : .{ .dx = true, .eax = true }
     );
 }
 
@@ -29,7 +29,7 @@ pub fn inb(port: u16) u8 {
     return asm volatile ("inb %[port], %[byte]"
         : [byte] "={al}" (-> u8),
         : [port] "{dx}" (port),
-        : "dx", "al"
+        : .{ .dx = true, .al = true }
     );
 }
 
@@ -37,7 +37,7 @@ pub fn inw(port: u16) u16 {
     return asm volatile ("inw %[port], %[word]"
         : [word] "={ax}" (-> u16),
         : [port] "{dx}" (port),
-        : "dx", "ax"
+        : .{ .dx = true, .ax = true }
     );
 }
 
@@ -45,7 +45,7 @@ pub fn inl(port: u16) u32 {
     return asm volatile ("inl %[port], %[long]"
         : [long] "={eax}" (-> u32),
         : [port] "{dx}" (port),
-        : "dx", "eax"
+        : .{ .dx = true, .eax = true }
     );
 }
 
@@ -87,21 +87,21 @@ pub fn cpuid() [12]u8 {
         \\cpuid
         : [_] "={ebx}" (-> u32),
         :
-        : "eax", "ebx", "ecx", "edx"
+        : .{ .eax = true, .ebx = true, .ecx = true, .edx = true }
     ));
     const part2: [4]u8 = @bitCast(asm volatile (
         \\mov %[reg],%edx
         : [reg] "={edx}" (-> u32),
         :
-        : "edx"
+        : .{ .edx = true }
     ));
     const part3: [4]u8 = @bitCast(asm volatile (
         \\mov %[reg],%ecx
         : [reg] "={ecx}" (-> u32),
         :
-        : "ecx"
+        : .{ .ecx = true }
     ));
-    return part1++part2++part3;
+    return part1 ++ part2 ++ part3;
 }
 
 pub fn flags() RFLAGS {
@@ -110,6 +110,6 @@ pub fn flags() RFLAGS {
         \\pop %[long]
         : [long] "={rcx}" (-> RFLAGS),
         :
-        : "rcx"
+        : .{ .rcx = true }
     );
 }

@@ -14,51 +14,59 @@ const RuntimeServices = uefi.tables.RuntimeServices;
 
 var rs: *RuntimeServices = undefined;
 
-export fn _start(g: *uefi.protocol.GraphicsOutput, m: *const mmap, r: *RuntimeServices) callconv(.Win64) noreturn {
+export fn _start(
+    g: *uefi.protocol.GraphicsOutput,
+    m: *const mmap,
+    r: *RuntimeServices,
+    x: usize,
+    y: usize
+) callconv(.{ .x86_64_win = .{} }) noreturn {
     rs = r;
-    video.init(g);
+    video.init(g,x,y);
     alloc.init(m);
     PS2.init();
     UART.init();
     PCI.init();
     main() catch |err| errorHandler(err);
-    while (true) {}
+    while (true) asm volatile ("hlt");
 }
 
 fn main() !void {
     const GA = alloc.get();
     const allocator = GA.allocator();
-    
-    var buffer = std.ArrayList(u8).init(allocator);
-    const writer = buffer.writer();
 
     const graphics = video.get();
     const screen = graphics.writer();
 
+    try screen.writeAll("Now in freestanding elf binary!\n");
+
+    const string = try std.fmt.allocPrint(
+        allocator,
+        "{s}",
+        .{"This string was allocated on the heap\n"},
+    );
+    defer allocator.free(string);
+    try screen.writeAll(string);
+
     var ps2 = PS2.get();
-    //const keyboard = ps2.reader();
+    const keyboard = ps2.reader();
 
-    try screen.print("{s}\n", .{a.cpuid()});
-    try screen.print("Memory: {d}MB\n", .{GA.buf.len / (1028 * 1028)});
+    try screen.print("CPU: {s}\n", .{a.cpuid()});
+    try screen.print(
+        "Largest Memory Descriptor: {d}MB\n",
+        .{GA.buf.len / (1028 * 1028)},
+    );
+    try screen.writeAll("Press P if you want to test the panic handler\n");
 
-
-    try screen.print("{any}", .{rs.resetSystem});
-
-    var scan = PS2.ScanCode.fetch();
-    while (true) : (scan = PS2.ScanCode.fetch()) {
-        switch (scan.key) {
-            .ESC => ps2.reboot(),
-            .F1 => shutdown(),
-            else => {
-                if (scan.key.getChar()) |char| {
-                    try screen.writeByte(char);
-                    try writer.writeByte(char);
-                }
-            },
+    var char = try keyboard.readByte();
+    while (true) : (char = try keyboard.readByte()) {
+        switch (char) {
+            '!' => ps2.reboot(),
+            '"' => shutdown(),
+            'P' => @panic("Pressed P for Panic"),
+            else => try screen.writeByte(char),
         }
     }
-
-    @panic("End of main");
 }
 
 fn shutdown() noreturn {

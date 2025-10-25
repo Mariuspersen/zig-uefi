@@ -15,7 +15,7 @@ const Input = SimpleTextInput.Key.Input;
 const BootServices = uefi.tables.BootServices;
 const RuntimeServices = uefi.tables.RuntimeServices;
 
-const PageAlignedPointer = [*]align(std.mem.page_size) u8;
+const PageAlignedPointer = [*]align(std.heap.pageSize()) u8;
 
 const efi_page_mask: usize = 0xfff;
 const efi_page_shift: usize = 12;
@@ -40,7 +40,7 @@ pub fn main() Status {
         try screen.writeAll("Press the power button to restart...\n");
         asm volatile ("HLT");
     }
-    return Status.Success;
+    return Status.success;
 }
 
 fn setup() !void {
@@ -72,7 +72,7 @@ fn setup() !void {
     try fs.openVolume(&root).err();
 
     try screen.print("Opening image\n", .{});
-    var program: *uefi.protocol.File = undefined;
+    var program: *const uefi.protocol.File = undefined;
     try root.open(
         &program,
         path,
@@ -118,8 +118,8 @@ fn setup() !void {
 
         const pageCount = efiSizeToPages(Phdr.p_memsz);
         try bs.allocatePages(
-            .AllocateAddress,
-            .LoaderData,
+            .allocate_address,
+            .loader_data,
             pageCount,
             &segBuf,
         ).err();

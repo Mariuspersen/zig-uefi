@@ -30,15 +30,15 @@ pub fn attemptToExitBootService(self: *Self, bs: *BootServices) !void {
 }
 
 pub fn updateMap(self: *Self, bs: *BootServices) !void {
-    while (.BufferTooSmall == bs.getMemoryMap(
+    while (.buffer_too_small == bs.getMemoryMap(
         &self.size,
         self.map,
         &self.key,
         &self.descSize,
         &self.descVer,
     )) {
-        if (.Success != bs.allocatePool(
-            .BootServicesData,
+        if (.success != bs.allocatePool(
+            .boot_services_data,
             self.size,
             @ptrCast(&self.*.map),
         )) {

@@ -63,9 +63,9 @@ pub fn writeGlyph(self: *Self, index: usize, x: usize, y: usize) void {
     for (glyph) |line| {
         const bits: bitField = @bitCast(line);
         const info = @typeInfo(@TypeOf(bits));
-        inline for (info.Struct.fields, 0..) |field, xs| {
+        inline for (info.@"struct".fields, 0..) |field, xs| {
             const value = @field(bits, field.name);
-            const len = info.Struct.fields.len;
+            const len = info.@"struct".fields.len;
             self.setPixel(len - xs + x, y + ys, if (value) self.foreground else self.background);
         }
         ys += 1;

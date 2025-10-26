@@ -2,6 +2,8 @@ const std = @import("std");
 const psf = @import("PCScreenFont.zig");
 const uefi = std.os.uefi;
 const GraphicsOutput = uefi.protocol.GraphicsOutput;
+const Writer = std.io.Writer;
+const Error = Writer.Error;
 
 const Self = @This();
 
@@ -11,6 +13,7 @@ const Cursor = struct {
 };
 
 var graphics: Self = undefined;
+var buf: [1024]u8 = undefined;
 
 context: *GraphicsOutput,
 buffer: []u32,
@@ -72,11 +75,26 @@ pub fn writeGlyph(self: *Self, index: usize, x: usize, y: usize) void {
     }
 }
 
-const Writer = std.io.Writer(
+const _Writer = std.io.Writer(
     *Self,
     error{},
     write,
 );
+
+fn drain(w: *Writer, data: []const []const u8, splat: usize) Error!usize {
+    _ = w;
+    _ = data;
+    _ = splat;
+}
+
+fn writer(buffer: []u8) Writer {
+    return .{
+        .buffer = buffer,
+        .vtable = .{
+            .drain = drain,
+        },
+    };
+}
 
 fn write(self: *Self, data: []const u8) error{}!usize {
     const width = self.font.getWidth();
@@ -118,7 +136,7 @@ fn write(self: *Self, data: []const u8) error{}!usize {
     return data.len;
 }
 
-pub fn writer(self: *Self) Writer {
+pub fn _writer(self: *Self) Writer {
     return Writer{ .context = self };
 }
 

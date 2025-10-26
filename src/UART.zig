@@ -8,7 +8,7 @@ pub const PORT: u16 = 0x3f8;
 
 const Self = @This();
 
-interface_write: Writer,
+interface: Writer,
 
 var UART: Self = undefined;
 var buf: [1024]u8 = undefined;
@@ -63,8 +63,12 @@ pub fn init() void {
     a.outb(PORT + 4, 0x0F);
 
     UART = .{
-        .interface_write = writer(&buf)
+        .interface = writer(&buf)
     };
+}
+
+pub fn get() *Self {
+    return &UART;
 }
 
 

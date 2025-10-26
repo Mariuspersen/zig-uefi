@@ -109,7 +109,7 @@ pub fn panic(msg: []const u8, stack_trace: ?*builtin.StackTrace, return_address:
     }
 
     const serial = UART.get();
-    const uart = serial.writer();
+    const uart = &serial.interface;
     const screen = graphics.writer();
 
     graphics.cursor = .{ .x = 20, .y = 20 };
